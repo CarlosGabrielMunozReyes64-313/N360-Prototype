@@ -1,0 +1,122 @@
+/* Estilos del módulo de autenticación. Reutiliza las variables --nx-* y
+   las clases .card/.btn/.field ya definidas en index.css; no modifica ese archivo. */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nx-gray);
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 22px;
+}
+.auth-brand .brand-name { font-size: 22px; }
+.auth-brand .brand-sub { margin-top: 4px; }
+
+.auth-field {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nx-text);
+}
+.auth-field input {
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: var(--body);
+  color: var(--nx-text);
+  background: #fff;
+}
+.auth-field input:focus-visible {
+  outline: 2px solid var(--nx-mid);
+  outline-offset: 1px;
+}
+.auth-hint { font-size: 11.5px; color: var(--nx-muted); }
+
+.auth-error {
+  background: #fbebe9;
+  border: 1px solid var(--nx-alert);
+  color: var(--nx-alert);
+  font-size: 13px;
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.auth-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-actions .btn {
+  width: 100%;
+  padding: 12px;
+}
+.auth-switch {
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--nx-muted);
+}
+.auth-switch button {
+  border: 0;
+  background: none;
+  color: var(--nx-mid);
+  font-weight: 600;
+  padding: 0;
+  font-size: inherit;
+}
+.auth-switch button:hover { text-decoration: underline; }
+
+.auth-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nx-muted);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.auth-session-bar {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 6px 5px 12px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  color: var(--nx-muted);
+}
+.auth-session-bar strong { color: var(--nx-text); font-weight: 600; }
+.auth-session-bar button {
+  border: 0;
+  background: var(--nx-gray);
+  color: var(--nx-text);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.auth-session-bar button:hover { background: var(--border); }
