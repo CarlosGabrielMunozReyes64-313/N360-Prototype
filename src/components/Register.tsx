@@ -6,9 +6,12 @@ const PASS_MIN = 8
 
 interface Props {
   onIrALogin: () => void
+  /** Se llama justo después de crear la cuenta con éxito (antes de que
+   * AuthGate revele la app). No afecta el flujo si no se pasa. */
+  onSuccess?: () => void
 }
 
-export function Register({ onIrALogin }: Props) {
+export function Register({ onIrALogin, onSuccess }: Props) {
   const { registrar, error, limpiarError } = useAuth()
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
@@ -34,6 +37,7 @@ export function Register({ onIrALogin }: Props) {
         password,
         rol: 'empresa',
       })
+      onSuccess?.()
     } catch {
       /* el error queda expuesto vía useAuth().error */
     } finally {

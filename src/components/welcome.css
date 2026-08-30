@@ -1,0 +1,72 @@
+/* Estilos del mensaje de bienvenida post-registro. Archivo propio para no
+   tocar auth.css ni index.css. Reutiliza las variables --nx-* del tema. */
+
+:root {
+  --welcome-fade-ms: 3000ms;
+}
+
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nx-dark, #0b2e26);
+  opacity: 1;
+  /* !important + selector de clase (más específico que "*") es intencional:
+     index.css apaga TODAS las transiciones con `* { transition: none !important }`
+     bajo prefers-reduced-motion, como buena práctica general de accesibilidad.
+     Aquí se hace una excepción deliberada solo para este aviso, por pedido
+     explícito: sí debe animarse aunque el sistema pida reducir movimiento. */
+  transition: opacity var(--welcome-fade-ms) ease !important;
+}
+
+.welcome-overlay--saliendo {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.welcome-content {
+  text-align: center;
+  padding: 32px;
+  animation: welcome-aparecer 700ms ease both;
+}
+
+.welcome-brand {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+.welcome-title {
+  color: #fff;
+  font-size: clamp(26px, 5vw, 42px);
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.welcome-sub {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(14px, 2.2vw, 18px);
+  margin: 0;
+}
+
+@keyframes welcome-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-content {
+    animation: none;
+  }
+}

@@ -6,6 +6,11 @@ interface Props {
   perfil: Perfil;
   onChange: (p: Perfil) => void;
   onNext: () => void;
+  /** Texto del botón principal. Por defecto, el de avance del asistente. */
+  textoBoton?: string;
+  /** Oculta la nota "Este prototipo arranca en el perfil..." — no aplica
+   * cuando este formulario se usa dentro del modal de edición posterior. */
+  ocultarNota?: boolean;
 }
 
 /** Dígito de verificación del NIT: módulo 11 de la DIAN. */
@@ -20,7 +25,13 @@ export function calcularDV(nit: string): string | null {
   return String(r > 1 ? 11 - r : r);
 }
 
-export function PerfilPaso({ perfil, onChange, onNext }: Props) {
+export function PerfilPaso({
+  perfil,
+  onChange,
+  onNext,
+  textoBoton,
+  ocultarNota,
+}: Props) {
   const set = <K extends keyof Perfil>(k: K, v: Perfil[K]) =>
     onChange({ ...perfil, [k]: v });
 
@@ -60,8 +71,11 @@ export function PerfilPaso({ perfil, onChange, onNext }: Props) {
               id="nit"
               value={perfil.nit}
               inputMode="numeric"
+              maxLength={9}
               placeholder="900123456"
-              onChange={(e) => set("nit", e.target.value.replace(/\D/g, ""))}
+              onChange={(e) =>
+                set("nit", e.target.value.replace(/\D/g, "").slice(0, 9))
+              }
             />
             <input
               aria-label="Dígito de verificación"
@@ -179,17 +193,19 @@ export function PerfilPaso({ perfil, onChange, onNext }: Props) {
         </div>
       </div>
 
-      <div className="note">
-        Este prototipo arranca en el perfil. El acceso con cuenta va antes y se
-        integra aparte; los datos no se conservan al recargar la página.
-      </div>
+      {!ocultarNota && (
+        <div className="note">
+          Este prototipo arranca en el perfil. El acceso con cuenta va antes y
+          se integra aparte; los datos no se conservan al recargar la página.
+        </div>
+      )}
 
       <div className="nav-footer">
         <span className="progress-text">
           Los campos marcados alimentan el cálculo
         </span>
         <button className="btn" disabled={!listo} onClick={onNext}>
-          Continuar al tamizaje
+          {textoBoton ?? "Continuar al tamizaje"}
         </button>
       </div>
     </section>

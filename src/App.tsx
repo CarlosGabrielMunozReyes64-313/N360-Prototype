@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Formato, Perfil, Respuestas, Tamizaje, Valor } from './types'
+import type { Usuario } from './auth/types'
 import { FORMATO_01 } from './data/formato01'
 import { FORMATO_02 } from './data/formato02'
 import {
@@ -10,6 +11,8 @@ import { TamizajePaso } from './components/TamizajePaso'
 import { MenuFormatos } from './components/MenuFormatos'
 import { Cuestionario } from './components/Cuestionario'
 import { Resultados } from './components/Resultados'
+import { EditarDatosModal } from './components/EditarDatosModal'
+import './topbar.css'
 
 const FORMATOS: Formato[] = [FORMATO_01, FORMATO_02]
 const PASOS = ['Perfil', 'Tamizaje', 'Diagnóstico', 'Resultados']
@@ -23,12 +26,71 @@ const TAMIZAJE_VACIO: Tamizaje = {
   cicloPrevio: '', comunidadesEtnicas: '', consumidorFinal: '',
 }
 
-export default function App() {
-  const [paso, setPaso] = useState(0)
-  const [perfil, setPerfil] = useState<Perfil>(PERFIL_VACIO)
-  const [tamizaje, setTamizaje] = useState<Tamizaje>(TAMIZAJE_VACIO)
+function perfilCompleto(p: Perfil): boolean {
+  return Boolean(p.razonSocial && p.nit && p.sector && p.municipio)
+}
+function tamizajeCompleto(t: Tamizaje): boolean {
+  return Boolean(
+    t.tamano && t.empleados && t.areasDeVida &&
+    t.cicloPrevio && t.comunidadesEtnicas && t.consumidorFinal,
+  )
+}
+
+/** Guardado local por cuenta. Solo mientras no exista un endpoint de
+ * backend para empresa/tamizaje — es la misma estrategia "front-only"
+ * que ya usa la sesión de auth (localStorage), aplicada aquí a los
+ * datos de perfil y tamizaje para que no se pidan de nuevo en cada login. */
+function claveDatos(usuarioId: string) {
+  return `n360_datos:${usuarioId}`
+}
+function cargarDatosGuardados(usuarioId: string): { perfil: Perfil; tamizaje: Tamizaje } | null {
+  try {
+    const raw = localStorage.getItem(claveDatos(usuarioId))
+    if (!raw) return null
+    const datos = JSON.parse(raw)
+    if (datos?.perfil && datos?.tamizaje) return datos
+    return null
+  } catch {
+    return null
+  }
+}
+function guardarDatos(usuarioId: string, perfil: Perfil, tamizaje: Tamizaje) {
+  try {
+    localStorage.setItem(claveDatos(usuarioId), JSON.stringify({ perfil, tamizaje }))
+  } catch {
+    /* si no hay almacenamiento disponible, simplemente no persiste */
+  }
+}
+
+interface Props {
+  usuario: Usuario
+  onLogout: () => void
+}
+
+export default function App({ usuario, onLogout }: Props) {
+  const guardado = useMemo(() => cargarDatosGuardados(usuario.usuario_id), [usuario.usuario_id])
+  const yaCompletadoAlEntrar = Boolean(
+    guardado && perfilCompleto(guardado.perfil) && tamizajeCompleto(guardado.tamizaje),
+  )
+
+  const [paso, setPaso] = useState(yaCompletadoAlEntrar ? 2 : 0)
+  const [perfil, setPerfil] = useState<Perfil>(guardado?.perfil ?? PERFIL_VACIO)
+  const [tamizaje, setTamizaje] = useState<Tamizaje>(guardado?.tamizaje ?? TAMIZAJE_VACIO)
+  const [completadoUnaVez, setCompletadoUnaVez] = useState(yaCompletadoAlEntrar)
+  const [editando, setEditando] = useState(false)
   const [respuestas, setRespuestas] = useState<Respuestas>({})
   const [abierto, setAbierto] = useState<Formato['id'] | null>(null)
+
+  // En cuanto perfil y tamizaje quedan completos (la primera vez, por el
+  // asistente normal, o después vía el modal de edición), se guardan para
+  // esta cuenta y se marca como "ya completado" — así el próximo login
+  // entra directo a Diagnóstico en vez de pedir todo de nuevo.
+  useEffect(() => {
+    if (perfilCompleto(perfil) && tamizajeCompleto(tamizaje)) {
+      guardarDatos(usuario.usuario_id, perfil, tamizaje)
+      setCompletadoUnaVez(true)
+    }
+  }, [perfil, tamizaje, usuario.usuario_id])
 
   const responder = (id: string, v: Valor) =>
     setRespuestas((r) => ({ ...r, [id]: v }))
@@ -69,17 +131,26 @@ export default function App() {
   )
 
   const puedeAvanzar = (p: number) => {
-    if (p === 0) return Boolean(perfil.razonSocial && perfil.nit && perfil.sector && perfil.municipio)
-    if (p === 1) return Boolean(tamizaje.tamano && tamizaje.empleados && tamizaje.areasDeVida &&
-      tamizaje.cicloPrevio && tamizaje.comunidadesEtnicas && tamizaje.consumidorFinal)
+    if (p === 0) return perfilCompleto(perfil)
+    if (p === 1) return tamizajeCompleto(tamizaje)
     if (p === 2) return FORMATOS.some((f) => progreso(f, respuestas, tamizaje).completo)
     return true
   }
 
   const irA = (i: number) => {
+    // Una vez completados perfil+tamizaje, esos dos pasos quedan bloqueados
+    // en la barra de pasos: la única forma de cambiarlos es el modal de
+    // edición (clic en el nombre de la empresa, arriba).
+    if (completadoUnaVez && i < 2 && i !== paso) return
     if (i <= paso || (i === paso + 1 && puedeAvanzar(paso))) {
       setPaso(i); setAbierto(null); window.scrollTo(0, 0)
     }
+  }
+
+  const guardarEdicion = (p: Perfil, t: Tamizaje) => {
+    setPerfil(p)
+    setTamizaje(t)
+    setEditando(false)
   }
 
   const formatoAbierto = FORMATOS.find((f) => f.id === abierto)
@@ -92,26 +163,42 @@ export default function App() {
             <div className="brand-name">NEXUS 360°</div>
             <div className="brand-sub">Diagnóstico normativo · ISO 26000 y Ley 2173</div>
           </div>
-          {perfil.razonSocial && (
-            <div className="company-tag">
-              <strong>{perfil.razonSocial}</strong>
-              {perfil.nit && `NIT ${perfil.nit}${perfil.dv ? '-' + perfil.dv : ''}`}
-            </div>
-          )}
-        </div>
-        <ul className="stepper">
-          {PASOS.map((label, i) => (
-            <li key={label}>
+
+          <div className="header-cuenta">
+            {perfil.razonSocial && (
               <button
-                className={'step' + (i === paso ? ' is-active' : i < paso ? ' is-done' : '')}
-                disabled={i > paso && !(i === paso + 1 && puedeAvanzar(paso))}
-                onClick={() => irA(i)}
+                type="button"
+                className="company-tag company-tag--clic"
+                onClick={() => setEditando(true)}
+                title={completadoUnaVez ? 'Editar datos de la empresa y el tamizaje' : 'Datos de la empresa'}
               >
-                <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
-                <span className="step-label">{label}</span>
+                <strong>{perfil.razonSocial}</strong>
+                {perfil.nit && `NIT ${perfil.nit}${perfil.dv ? '-' + perfil.dv : ''}`}
               </button>
-            </li>
-          ))}
+            )}
+            <div className="sesion-tag">
+              <span>Sesión: <strong>{usuario.nombre}</strong></span>
+              <button type="button" className="btn-ghost btn-sm" onClick={onLogout}>Cerrar sesión</button>
+            </div>
+          </div>
+        </div>
+
+        <ul className="stepper">
+          {PASOS.map((label, i) => {
+            const bloqueadoPorEdicion = completadoUnaVez && i < 2 && i !== paso
+            return (
+              <li key={label}>
+                <button
+                  className={'step' + (i === paso ? ' is-active' : i < paso ? ' is-done' : '')}
+                  disabled={bloqueadoPorEdicion || (i > paso && !(i === paso + 1 && puedeAvanzar(paso)))}
+                  onClick={() => irA(i)}
+                >
+                  <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="step-label">{label}</span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
       </header>
 
@@ -128,7 +215,6 @@ export default function App() {
         {paso === 2 && !formatoAbierto && (
           <MenuFormatos formatos={FORMATOS} respuestas={respuestas} tamizaje={tamizaje}
             onAbrir={(id) => { setAbierto(id); window.scrollTo(0, 0) }}
-            onBack={() => setPaso(1)}
             onResultados={() => { setPaso(3); window.scrollTo(0, 0) }} />
         )}
 
@@ -147,9 +233,19 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        Prototipo de autoevaluación. No constituye concepto jurídico. Los datos no se
-        conservan al recargar la página.
+        Prototipo de autoevaluación. No constituye concepto jurídico. Los datos del
+        diagnóstico no se conservan al recargar la página; el perfil y el tamizaje
+        sí quedan guardados para esta cuenta.
       </footer>
+
+      {editando && (
+        <EditarDatosModal
+          perfil={perfil}
+          tamizaje={tamizaje}
+          onGuardar={guardarEdicion}
+          onCancelar={() => setEditando(false)}
+        />
+      )}
     </>
   )
 }

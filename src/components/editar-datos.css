@@ -1,0 +1,63 @@
+/* Estilos del modal de edición de datos. Archivo propio, no toca index.css. */
+
+.editar-datos-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(11, 46, 38, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+
+.editar-datos-panel {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 760px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: editar-datos-entrar 200ms ease both;
+}
+
+.editar-datos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.editar-datos-titulo {
+  font-family: var(--display);
+  font-size: 20px;
+  color: var(--nx-dark);
+  margin: 2px 0 0;
+}
+
+.editar-datos-cerrar {
+  border: 0;
+  background: none;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--nx-muted);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.editar-datos-cerrar:hover { background: var(--nx-gray); color: var(--nx-text); }
+
+.editar-datos-body {
+  padding: 0 8px 8px;
+}
+/* Dentro del modal, la tarjeta de PerfilPaso/TamizajePaso no necesita su
+   propio marco de card (ya lo da el panel del modal). */
+.editar-datos-body .card {
+  box-shadow: none;
+  border: 0;
+  padding: 16px 16px 8px;
+}
+
+@keyframes editar-datos-entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

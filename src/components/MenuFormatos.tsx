@@ -6,11 +6,10 @@ interface Props {
   respuestas: Respuestas
   tamizaje: Tamizaje
   onAbrir: (id: Formato['id']) => void
-  onBack: () => void
   onResultados: () => void
 }
 
-export function MenuFormatos({ formatos, respuestas, tamizaje, onAbrir, onBack, onResultados }: Props) {
+export function MenuFormatos({ formatos, respuestas, tamizaje, onAbrir, onResultados }: Props) {
   const ley = leyAplicable(tamizaje)
   const algunoCompleto = formatos.some((f) => progreso(f, respuestas, tamizaje).completo)
 
@@ -73,8 +72,7 @@ export function MenuFormatos({ formatos, respuestas, tamizaje, onAbrir, onBack, 
         </div>
       )}
 
-      <div className="nav-footer">
-        <button className="btn-ghost" onClick={onBack}>← Volver al tamizaje</button>
+      <div className="nav-footer nav-footer--fin">
         <button className="btn" disabled={!algunoCompleto} onClick={onResultados}>
           Ver resultados
         </button>

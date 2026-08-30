@@ -1,0 +1,34 @@
+/* Estilos de la fila de cuenta en el header (reemplaza la barra flotante de
+   sesión anterior) y ajuste puntual para nav-footer con un solo botón.
+   Archivo propio para no tocar index.css. */
+
+.header-cuenta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.company-tag--clic {
+  cursor: pointer;
+  font-family: var(--mono);
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.company-tag--clic:hover { border-color: var(--nx-mid); }
+.company-tag--clic:focus-visible { outline: 2px solid var(--nx-mid); outline-offset: 2px; }
+
+.sesion-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--nx-muted);
+}
+.sesion-tag strong { color: var(--nx-text); font-weight: 600; }
+
+.btn-sm { padding: 4px 10px; font-size: 11.5px; }
+
+/* Cuando el nav-footer solo trae un botón (p. ej. MenuFormatos sin "Volver
+   al tamizaje"), lo alineamos a la derecha en vez de space-between. */
+.nav-footer--fin { justify-content: flex-end; }
