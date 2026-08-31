@@ -77,6 +77,21 @@ async function post<T>(path: string, body: unknown, token?: string): Promise<T> 
   return res.json() as Promise<T>
 }
 
+async function patch<T>(path: string, body: unknown, token: string): Promise<T> {
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    throw new AuthError('RED', 'No se pudo conectar con el servidor.')
+  }
+  if (!res.ok) throw await parseError(res)
+  return res.json() as Promise<T>
+}
+
 export async function registrar(payload: RegistroPayload): Promise<SesionRespuesta> {
   return post<SesionRespuesta>('/auth/register', payload)
 }
@@ -104,4 +119,27 @@ export async function validarSesion(token: string): Promise<{ usuario: SesionRes
   }
   if (!res.ok) throw await parseError(res)
   return res.json()
+}
+
+export interface ActualizarPerfilPayload {
+  nombre?: string
+  email?: string
+}
+
+/** PATCH /auth/me — cambia nombre y/o correo. La contraseña NUNCA pasa
+ * por aquí; ver cambiarPassword(). */
+export async function actualizarPerfil(
+  token: string, payload: ActualizarPerfilPayload,
+): Promise<{ usuario: SesionRespuesta['usuario'] }> {
+  return patch('/auth/me', payload, token)
+}
+
+export interface CambiarPasswordPayload {
+  password_actual: string
+  password_nueva: string
+}
+
+/** POST /auth/change-password — 204 sin cuerpo si sale bien. */
+export async function cambiarPassword(token: string, payload: CambiarPasswordPayload): Promise<void> {
+  return post<void>('/auth/change-password', payload, token)
 }

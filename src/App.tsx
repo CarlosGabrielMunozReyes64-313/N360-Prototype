@@ -11,7 +11,7 @@ import { TamizajePaso } from './components/TamizajePaso'
 import { MenuFormatos } from './components/MenuFormatos'
 import { Cuestionario } from './components/Cuestionario'
 import { Resultados } from './components/Resultados'
-import { EditarDatosModal } from './components/EditarDatosModal'
+import { EditarDatosPage } from './components/EditarDatosPage'
 import './topbar.css'
 
 const FORMATOS: Formato[] = [FORMATO_01, FORMATO_02]
@@ -62,6 +62,38 @@ function guardarDatos(usuarioId: string, perfil: Perfil, tamizaje: Tamizaje) {
   }
 }
 
+/** Un registro del historial: el estado que estuvo activo hasta esta fecha
+ * (justo antes de reemplazarse por uno nuevo). Se exporta el tipo para que
+ * EditarDatosPage lo use sin duplicar la forma. */
+export interface HistorialEntrada {
+  fecha: string
+  perfil: Perfil
+  tamizaje: Tamizaje
+}
+
+function claveHistorial(usuarioId: string) {
+  return `n360_historial:${usuarioId}`
+}
+function cargarHistorial(usuarioId: string): HistorialEntrada[] {
+  try {
+    const raw = localStorage.getItem(claveHistorial(usuarioId))
+    const datos = raw ? JSON.parse(raw) : []
+    return Array.isArray(datos) ? datos : []
+  } catch {
+    return []
+  }
+}
+/** Append-only: nunca se borra nada de aquí, solo se agrega. */
+function agregarAlHistorial(usuarioId: string, entrada: HistorialEntrada) {
+  try {
+    const actual = cargarHistorial(usuarioId)
+    actual.push(entrada)
+    localStorage.setItem(claveHistorial(usuarioId), JSON.stringify(actual))
+  } catch {
+    /* si no hay almacenamiento disponible, simplemente no persiste */
+  }
+}
+
 interface Props {
   usuario: Usuario
   onLogout: () => void
@@ -78,6 +110,7 @@ export default function App({ usuario, onLogout }: Props) {
   const [tamizaje, setTamizaje] = useState<Tamizaje>(guardado?.tamizaje ?? TAMIZAJE_VACIO)
   const [completadoUnaVez, setCompletadoUnaVez] = useState(yaCompletadoAlEntrar)
   const [editando, setEditando] = useState(false)
+  const [historial, setHistorial] = useState<HistorialEntrada[]>(() => cargarHistorial(usuario.usuario_id))
   const [respuestas, setRespuestas] = useState<Respuestas>({})
   const [abierto, setAbierto] = useState<Formato['id'] | null>(null)
 
@@ -148,12 +181,31 @@ export default function App({ usuario, onLogout }: Props) {
   }
 
   const guardarEdicion = (p: Perfil, t: Tamizaje) => {
+    // No se pierde nada: la versión que estaba activa queda archivada en
+    // el historial (con la fecha de este cambio) ANTES de reemplazarla.
+    // El historial es de solo lectura — no hay forma de borrar entradas.
+    const entrada: HistorialEntrada = { fecha: new Date().toISOString(), perfil, tamizaje }
+    agregarAlHistorial(usuario.usuario_id, entrada)
+    setHistorial((h) => [...h, entrada])
+
     setPerfil(p)
     setTamizaje(t)
     setEditando(false)
   }
 
   const formatoAbierto = FORMATOS.find((f) => f.id === abierto)
+
+  if (editando) {
+    return (
+      <EditarDatosPage
+        perfil={perfil}
+        tamizaje={tamizaje}
+        historial={historial}
+        onEnviar={guardarEdicion}
+        onVolver={() => setEditando(false)}
+      />
+    )
+  }
 
   return (
     <>
@@ -237,15 +289,6 @@ export default function App({ usuario, onLogout }: Props) {
         diagnóstico no se conservan al recargar la página; el perfil y el tamizaje
         sí quedan guardados para esta cuenta.
       </footer>
-
-      {editando && (
-        <EditarDatosModal
-          perfil={perfil}
-          tamizaje={tamizaje}
-          onGuardar={guardarEdicion}
-          onCancelar={() => setEditando(false)}
-        />
-      )}
     </>
   )
 }

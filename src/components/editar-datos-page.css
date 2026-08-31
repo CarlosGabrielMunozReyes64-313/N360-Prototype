@@ -1,0 +1,72 @@
+/* Vista completa de edición (perfil/tamizaje, historial, cuenta).
+   Archivo propio, no toca index.css. */
+
+.editar-pagina {
+  min-height: 100vh;
+  background: var(--nx-gray);
+}
+
+.editar-pagina-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 20px 24px 0;
+}
+
+.editar-tabs {
+  max-width: var(--wrap);
+  margin: 18px auto 0;
+  padding: 0 24px;
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.editar-tab {
+  border: 0;
+  background: none;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nx-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.editar-tab:hover { color: var(--nx-text); }
+.editar-tab.is-on { color: var(--nx-mid); border-bottom-color: var(--nx-mid); }
+
+.editar-pagina-body {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 24px 24px 60px;
+}
+
+.cuenta-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.historial-lista {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.historial-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.historial-fecha {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--nx-muted);
+  margin-bottom: 6px;
+}
+.historial-empresa { font-size: 14px; margin-bottom: 4px; }
+.historial-meta { font-size: 12.5px; color: var(--nx-muted); }

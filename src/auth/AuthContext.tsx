@@ -21,6 +21,9 @@ interface AuthState {
   registrar: (payload: RegistroPayload) => Promise<void>
   logout: () => void
   limpiarError: () => void
+  /** Cambia nombre y/o correo; actualiza la sesión guardada al terminar. */
+  actualizarPerfil: (payload: api.ActualizarPerfilPayload) => Promise<void>
+  cambiarPassword: (payload: api.CambiarPasswordPayload) => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -111,11 +114,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     guardarSesion(null)
   }, [token])
 
+  const actualizarPerfil = useCallback(async (payload: api.ActualizarPerfilPayload) => {
+    if (!token) throw new AuthError('CREDENCIALES_INVALIDAS', 'No hay una sesión activa.')
+    setError(null)
+    try {
+      const res = await api.actualizarPerfil(token, payload)
+      setUsuario(res.usuario)
+      guardarSesion({ token, usuario: res.usuario })
+    } catch (e) {
+      const err = e instanceof AuthError ? e : new AuthError('DESCONOCIDO', 'Error inesperado.')
+      setError(err)
+      throw err
+    }
+  }, [token])
+
+  const cambiarPasswordCtx = useCallback(async (payload: api.CambiarPasswordPayload) => {
+    if (!token) throw new AuthError('CREDENCIALES_INVALIDAS', 'No hay una sesión activa.')
+    setError(null)
+    try {
+      await api.cambiarPassword(token, payload)
+    } catch (e) {
+      const err = e instanceof AuthError ? e : new AuthError('DESCONOCIDO', 'Error inesperado.')
+      setError(err)
+      throw err
+    }
+  }, [token])
+
   const limpiarError = useCallback(() => setError(null), [])
 
   const value = useMemo<AuthState>(() => ({
     usuario, token, cargando, error, login, registrar: registrarUsuario, logout, limpiarError,
-  }), [usuario, token, cargando, error, login, registrarUsuario, logout, limpiarError])
+    actualizarPerfil, cambiarPassword: cambiarPasswordCtx,
+  }), [
+    usuario, token, cargando, error, login, registrarUsuario, logout, limpiarError,
+    actualizarPerfil, cambiarPasswordCtx,
+  ])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
