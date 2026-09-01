@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Login } from './Login'
 import { Register } from './Register'
 import { WelcomeOverlay } from './WelcomeOverlay'
+import { AdminPanel } from './AdminPanel'
 import App from '../App'
 
 /**
@@ -27,6 +28,13 @@ export function AuthGate() {
           onIrALogin={() => setVista('login')}
           onSuccess={() => setMostrarBienvenida(true)}
         />
+  }
+
+  // Las cuentas admin van a un panel completamente aparte — App.tsx (el
+  // flujo de perfil/tamizaje/diagnóstico) no cambia en nada para cuentas
+  // 'empresa', y el bienvenido animado solo tiene sentido para esas.
+  if (usuario.rol === 'admin') {
+    return <AdminPanel />
   }
 
   return (
