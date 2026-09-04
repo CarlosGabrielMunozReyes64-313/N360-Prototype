@@ -12,6 +12,8 @@ import { MenuFormatos } from './components/MenuFormatos'
 import { Cuestionario } from './components/Cuestionario'
 import { Resultados } from './components/Resultados'
 import { EditarDatosPage } from './components/EditarDatosPage'
+import { useAuth } from './auth/AuthContext'
+import { guardarEmpresa, guardarRespuestas } from './auth/empresaApi'
 import './topbar.css'
 
 const FORMATOS: Formato[] = [FORMATO_01, FORMATO_02]
@@ -34,6 +36,19 @@ function tamizajeCompleto(t: Tamizaje): boolean {
     t.tamano && t.empleados && t.areasDeVida &&
     t.cicloPrevio && t.comunidadesEtnicas && t.consumidorFinal,
   )
+}
+
+/** Todos los códigos de pregunta de un formato, para separar las
+ * respuestas (que viven juntas en un solo objeto) por formato al
+ * mandarlas al backend. */
+function codigosDeFormato(formato: Formato): string[] {
+  const codigos: string[] = []
+  for (const dim of formato.dimensiones) {
+    for (const sec of dim.secciones) {
+      for (const p of sec.preguntas) codigos.push(p.id)
+    }
+  }
+  return codigos
 }
 
 /** Guardado local por cuenta. Solo mientras no exista un endpoint de
@@ -100,6 +115,7 @@ interface Props {
 }
 
 export default function App({ usuario, onLogout }: Props) {
+  const { token } = useAuth()
   const guardado = useMemo(() => cargarDatosGuardados(usuario.usuario_id), [usuario.usuario_id])
   const yaCompletadoAlEntrar = Boolean(
     guardado && perfilCompleto(guardado.perfil) && tamizajeCompleto(guardado.tamizaje),
@@ -122,8 +138,51 @@ export default function App({ usuario, onLogout }: Props) {
     if (perfilCompleto(perfil) && tamizajeCompleto(tamizaje)) {
       guardarDatos(usuario.usuario_id, perfil, tamizaje)
       setCompletadoUnaVez(true)
+
+      // Best-effort: además de local, se manda al backend para que quede
+      // en la base de datos real (lo usa el panel de admin). Si falla
+      // (sin conexión, backend caído), no pasa nada — el front sigue
+      // funcionando exactamente igual con localStorage, como ya hacía.
+      if (token) {
+        guardarEmpresa(token, {
+          razon_social: perfil.razonSocial,
+          nit: perfil.nit,
+          dv: perfil.dv,
+          sector_id: perfil.sector,
+          municipio: perfil.municipio,
+          departamento: perfil.departamento || null,
+          extranjera: perfil.extranjera,
+          tamano: tamizaje.tamano as 'micro' | 'pequena' | 'mediana' | 'grande',
+          empleados: Number(tamizaje.empleados) || 0,
+          areas_de_vida: tamizaje.areasDeVida as 'si' | 'no' | 'nose',
+          ciclo_previo: tamizaje.cicloPrevio === 'si',
+          comunidades_etnicas: tamizaje.comunidadesEtnicas === 'si',
+          consumidor_final: tamizaje.consumidorFinal === 'si',
+        }).catch(() => { /* best-effort: sin red o backend caído, no rompe nada */ })
+      }
     }
-  }, [perfil, tamizaje, usuario.usuario_id])
+  }, [perfil, tamizaje, usuario.usuario_id, token])
+
+  // Igual de best-effort: cada vez que cambian las respuestas del
+  // diagnóstico, se manda al backend la parte que le corresponde a cada
+  // formato (separadas, porque `respuestas` las mezcla todas juntas).
+  // Solo tiene sentido una vez existe la empresa+tamizaje del lado del
+  // backend (si no, el endpoint responde con un error controlado, que
+  // aquí simplemente se ignora).
+  useEffect(() => {
+    if (!token || !completadoUnaVez) return
+    for (const formato of FORMATOS) {
+      const codigosFormato = new Set(codigosDeFormato(formato))
+      const subset: Record<string, string> = {}
+      for (const [k, v] of Object.entries(respuestas)) {
+        if (codigosFormato.has(k)) subset[k] = String(v)
+      }
+      if (Object.keys(subset).length === 0) continue
+      const completo = progreso(formato, respuestas, tamizaje).completo
+      guardarRespuestas(token, formato.id, { respuestas: subset, completo })
+        .catch(() => { /* best-effort */ })
+    }
+  }, [respuestas, completadoUnaVez, token, tamizaje])
 
   const responder = (id: string, v: Valor) =>
     setRespuestas((r) => ({ ...r, [id]: v }))

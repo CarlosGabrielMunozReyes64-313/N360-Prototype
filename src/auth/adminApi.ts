@@ -8,7 +8,12 @@ export interface UsuarioAdmin extends Usuario {
   intentos_fallidos: number
   bloqueado_hasta: string | null
   creado_en: string
+  /** Marca de eliminación suave. Si no es null, la cuenta está eliminada
+   * (archivada): no puede iniciar sesión y su correo quedó libre. */
+  archivado_en: string | null
 }
+
+export type MotivoCierre = 'logout' | 'admin' | 'eliminacion'
 
 export interface SesionAdmin {
   sesion_id: string
@@ -16,8 +21,75 @@ export interface SesionAdmin {
   creado_en: string
   expira_en: string
   revocado_en: string | null
+  /** Por qué se cerró. null en sesiones vivas y en las cerradas antes de
+   * la migración 006, donde el motivo no quedó registrado. */
+  revocado_motivo: MotivoCierre | null
   ip_origen: string | null
   user_agent: string | null
+}
+
+/** Conteo de sesiones por usuario, para la lista de actividad. */
+export interface ResumenSesiones {
+  usuario_id: string
+  total: number
+  activas: number
+  ultima_sesion: string | null
+}
+
+export interface EmpresaActividad {
+  empresa_id: string
+  razon_social: string
+  nit: string
+  dv: string
+  municipio: string
+  creado_en: string
+  es_creador: boolean
+}
+
+export interface TamizajeActividad {
+  ciclo_id: string
+  empresa_id: string
+  razon_social: string
+  anio: number
+  tamano: string
+  empleados: number
+  areas_de_vida: string
+  ciclo_previo: boolean
+  comunidades_etnicas: boolean
+  consumidor_final: boolean
+  creado_en: string
+}
+
+export interface DiagnosticoActividad {
+  diagnostico_id: string
+  formato_id: string
+  codigo: string
+  formato_nombre: string
+  razon_social: string
+  anio: number
+  estado: string
+  creado_en: string
+  completado_en: string | null
+  respuestas_total: number
+  respuestas_usuario: number
+  primera_respuesta: string | null
+  ultima_respuesta: string | null
+}
+
+export interface ActividadUsuario {
+  usuario: UsuarioAdmin
+  sesiones: SesionAdmin[]
+  empresas: EmpresaActividad[]
+  tamizajes: TamizajeActividad[]
+  diagnosticos: DiagnosticoActividad[]
+}
+
+/** Resultado de eliminar una cuenta. `modo` distingue el borrado real del
+ * archivado, que es lo que decide el backend según si quedó rastro. */
+export interface ResultadoEliminacion {
+  usuario_id: string
+  modo: 'fisico' | 'archivado'
+  mensaje: string
 }
 
 async function parseError(res: Response): Promise<AuthError> {
@@ -54,8 +126,11 @@ async function llamar<T>(
   return res.json() as Promise<T>
 }
 
-export function listarUsuarios(token: string): Promise<UsuarioAdmin[]> {
-  return llamar('/admin/usuarios', token)
+export function listarUsuarios(
+  token: string, incluirArchivados = false,
+): Promise<UsuarioAdmin[]> {
+  const query = incluirArchivados ? '?incluir_archivados=true' : ''
+  return llamar(`/admin/usuarios${query}`, token)
 }
 
 export function cambiarEstadoUsuario(
@@ -86,9 +161,36 @@ export function restablecerPasswordUsuario(
   })
 }
 
+/**
+ * Elimina una cuenta. El backend decide entre borrado definitivo y
+ * archivado según si el usuario dejó rastro (empresas, respuestas);
+ * `conservarHistorial` fuerza el archivado incluso si la cuenta está limpia.
+ */
+export function eliminarUsuario(
+  token: string, usuarioId: string, conservarHistorial = false,
+): Promise<ResultadoEliminacion> {
+  const query = conservarHistorial ? '?conservar_historial=true' : ''
+  return llamar(`/admin/usuarios/${usuarioId}${query}`, token, { method: 'DELETE' })
+}
+
+/** Deshace un archivado. No aplica a cuentas borradas definitivamente. */
+export function restaurarUsuario(token: string, usuarioId: string): Promise<UsuarioAdmin> {
+  return llamar(`/admin/usuarios/${usuarioId}/restaurar`, token, { method: 'POST' })
+}
+
 export function listarSesiones(token: string, usuarioId?: string): Promise<SesionAdmin[]> {
   const query = usuarioId ? `?usuario_id=${usuarioId}` : ''
   return llamar(`/admin/sesiones${query}`, token)
+}
+
+/** Sesiones totales y activas por usuario, sin traer cada sesión. */
+export function resumenSesiones(token: string): Promise<ResumenSesiones[]> {
+  return llamar('/admin/sesiones/resumen', token)
+}
+
+/** Todo el rastro de un usuario: sesiones, empresas, tamizajes y diagnósticos. */
+export function actividadUsuario(token: string, usuarioId: string): Promise<ActividadUsuario> {
+  return llamar(`/admin/usuarios/${usuarioId}/actividad`, token)
 }
 
 export function revocarSesion(token: string, sesionId: string): Promise<void> {

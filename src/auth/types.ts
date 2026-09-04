@@ -43,6 +43,10 @@ export type AuthErrorCode =
   | 'CUENTA_INACTIVA'
   | 'EMAIL_NO_VERIFICADO'
   | 'VALIDACION'
+  /** La sesión es válida pero la acción exige rol admin (endpoints /admin/*). */
+  | 'PROHIBIDO'
+  /** El estado actual del recurso impide la acción (cuenta ya eliminada, correo ya tomado). */
+  | 'CONFLICTO'
   | 'RED'
   | 'DESCONOCIDO'
 
