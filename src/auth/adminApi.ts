@@ -183,6 +183,82 @@ export function listarSesiones(token: string, usuarioId?: string): Promise<Sesio
   return llamar(`/admin/sesiones${query}`, token)
 }
 
+// ---- Estadísticas y detalle de empresas (panel /admin/estadisticas) ----
+
+export interface ResumenGeneral {
+  empresas: number
+  usuarios: number
+  diagnosticos_totales: number
+  diagnosticos_completados: number
+}
+
+export interface ConteoSector {
+  sector_id: string
+  nombre: string
+  total: number
+}
+
+export interface ConteoTamano {
+  tamano: string
+  total: number
+}
+
+export interface ConteoEstado {
+  formato_id: string
+  estado: string
+  total: number
+}
+
+export interface PromedioDimension {
+  formato_id: string
+  numero: string
+  dimension: string
+  promedio: number
+  respuestas: number
+}
+
+export interface Estadisticas {
+  resumen: ResumenGeneral
+  empresas_por_sector: ConteoSector[]
+  empresas_por_tamano: ConteoTamano[]
+  diagnosticos_por_estado: ConteoEstado[]
+  promedio_por_dimension: PromedioDimension[]
+}
+
+/** Una fila por empresa activa: perfil, tamizaje del ciclo más reciente y
+ * estado actual de cada formato en ese ciclo. Los campos de tamizaje y de
+ * diagnóstico son null cuando la empresa aún no tiene ciclo registrado. */
+export interface EmpresaDetalle {
+  empresa_id: string
+  razon_social: string
+  nit: string
+  dv: string
+  sector_id: string
+  sector_nombre: string
+  municipio: string
+  departamento: string | null
+  creado_en: string
+  anio: number | null
+  tamano: string | null
+  empleados: number | null
+  areas_de_vida: string | null
+  ciclo_previo: boolean | null
+  comunidades_etnicas: boolean | null
+  consumidor_final: boolean | null
+  iso26000_estado: string | null
+  ley2173_estado: string | null
+}
+
+/** Conteos generales y distribuciones para el panel de estadísticas. */
+export function obtenerEstadisticas(token: string): Promise<Estadisticas> {
+  return llamar('/admin/estadisticas', token)
+}
+
+/** Una fila por empresa, para la exportación a CSV. */
+export function listarEmpresasDetalle(token: string): Promise<EmpresaDetalle[]> {
+  return llamar('/admin/empresas', token)
+}
+
 /** Sesiones totales y activas por usuario, sin traer cada sesión. */
 export function resumenSesiones(token: string): Promise<ResumenSesiones[]> {
   return llamar('/admin/sesiones/resumen', token)
