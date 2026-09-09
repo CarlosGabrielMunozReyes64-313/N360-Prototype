@@ -49,7 +49,7 @@ export function AdminPanel() {
           className={'admin-tab' + (pestana === 'estadisticas' ? ' is-on' : '')}
           onClick={() => setPestana('estadisticas')}
         >
-          Estadísticas
+          Estadísticas generales
         </button>
       </nav>
 

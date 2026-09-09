@@ -437,3 +437,40 @@
   .barra-fila { grid-template-columns: 1fr; gap: 4px; }
   .barra-valor { text-align: left; }
 }
+
+/* Gráfica general: una sola pieza ancha, con scroll propio cuando hay
+   muchas barras para no romper el ancho de la página. */
+.grafica-card { padding-bottom: 26px; }
+.grafica-scroll {
+  margin-top: 18px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+.grafica-scroll svg { min-width: 720px; }
+.grafica-scroll::-webkit-scrollbar { height: 9px; }
+.grafica-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong); border-radius: 999px;
+}
+
+/* Botonera de exportación */
+.export-acciones {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; align-items: center;
+}
+.export-aviso {
+  margin: 14px 0 0; font-size: 13px; color: var(--nx-gold);
+  border-left: 3px solid var(--nx-gold); padding-left: 10px;
+}
+.export-detalle {
+  margin: 18px 0 0; padding-left: 18px;
+  font-size: 12.5px; color: var(--nx-muted); line-height: 1.7;
+}
+.export-detalle strong { color: var(--nx-text); font-weight: 600; }
+
+@media (max-width: 640px) {
+  .export-acciones { flex-direction: column; align-items: stretch; }
+  .export-acciones .btn, .export-acciones .btn-ghost { width: 100%; }
+}
