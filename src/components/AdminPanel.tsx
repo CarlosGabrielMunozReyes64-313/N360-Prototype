@@ -3,12 +3,13 @@ import { useAuth } from '../auth/AuthContext'
 import { AuthError } from '../auth/types'
 import * as adminApi from '../auth/adminApi'
 import { EstadisticasTab } from './EstadisticasTab'
+import { EmpresasTab } from './EmpresasTab'
 import type {
   UsuarioAdmin, ResumenSesiones, ActividadUsuario, MotivoCierre,
 } from '../auth/adminApi'
 import './admin-panel.css'
 
-type Pestana = 'usuarios' | 'sesiones' | 'estadisticas'
+type Pestana = 'usuarios' | 'sesiones' | 'estadisticas' | 'empresas'
 
 export function AdminPanel() {
   const { usuario, token, logout } = useAuth()
@@ -51,12 +52,20 @@ export function AdminPanel() {
         >
           Estadísticas generales
         </button>
+        <button
+          type="button"
+          className={'admin-tab' + (pestana === 'empresas' ? ' is-on' : '')}
+          onClick={() => setPestana('empresas')}
+        >
+          Datos de empresa
+        </button>
       </nav>
 
       <main className="admin-body">
         {pestana === 'usuarios' && <TablaUsuarios token={token} adminId={usuario.usuario_id} />}
         {pestana === 'sesiones' && <PestanaActividad token={token} />}
         {pestana === 'estadisticas' && <EstadisticasTab token={token} />}
+        {pestana === 'empresas' && <EmpresasTab token={token} />}
       </main>
     </div>
   )
