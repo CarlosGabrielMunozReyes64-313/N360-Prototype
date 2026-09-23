@@ -14,6 +14,10 @@ export interface Usuario {
   activo: boolean
   email_verificado_en: string | null
   ultimo_login_en: string | null
+  /** Cuándo subió su foto de perfil (sirve de versión para la caché).
+   * null = usa su foto predeterminada (iniciales). Opcional porque las
+   * sesiones guardadas antes de existir este campo no lo traen. */
+  foto_actualizada_en?: string | null
 }
 
 export interface RegistroPayload {

@@ -1,45 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as adminApi from '../auth/adminApi'
 import type { Estadisticas, EmpresaDetalle } from '../auth/adminApi'
 import { AuthError } from '../auth/types'
 import { useAuth } from '../auth/AuthContext'
-import { GraficaGeneral } from './GraficaGeneral'
+import { PanelGraficas } from './PanelGraficas'
+import { IconoDescarga } from './Iconos'
 import {
   construirSecciones, seccionesConDatos, selloArchivo, selloFecha, totalBarras,
 } from '../engine/agregados'
-import { svgAPng } from '../export/rasterizar'
+import { VISTAS } from '../engine/vistasGraficas'
+import type { Vista } from '../engine/vistasGraficas'
 import type { Imagen } from '../export/rasterizar'
-
-const VERDE_OSCURO = '#024029'
-const VERDE_MEDIO = '#04a97a'
-
-/** Barra horizontal simple, hecha a mano en SVG (mismo espíritu que
- * Radar.tsx: sin librerías de gráficas nuevas). `valor` y `max` en la
- * misma unidad; `ancho` es el ancho total disponible en px. */
-function BarraHorizontal({
-  etiqueta, valor, max, sufijo = '', color = VERDE_MEDIO, ancho = 420,
-}: {
-  etiqueta: string
-  valor: number
-  max: number
-  sufijo?: string
-  color?: string
-  ancho?: number
-}) {
-  const alto = 26
-  const pctBarra = max > 0 ? Math.min(1, valor / max) : 0
-  const anchoBarra = Math.max(2, pctBarra * ancho)
-  return (
-    <div className="barra-fila">
-      <div className="barra-etiqueta">{etiqueta}</div>
-      <svg width={ancho} height={alto} viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-label={`${etiqueta}: ${valor}${sufijo}`}>
-        <rect x={0} y={4} width={ancho} height={alto - 8} rx={4} fill="#eef2f0" />
-        <rect x={0} y={4} width={anchoBarra} height={alto - 8} rx={4} fill={color} />
-      </svg>
-      <div className="barra-valor">{valor}{sufijo}</div>
-    </div>
-  )
-}
 
 function TarjetaResumen({ etiqueta, valor }: { etiqueta: string; valor: number | string }) {
   return (
@@ -78,7 +49,9 @@ function descargarCSV(filas: EmpresaDetalle[]) {
   URL.revokeObjectURL(url)
 }
 
-type Formato = 'excel' | 'word'
+/** Qué se está generando: el informe completo en PDF, el PDF de una sola
+ * gráfica, el Excel o el Word. */
+type Trabajo = 'pdf' | 'pdf-grafica' | 'excel' | 'word'
 
 export function EstadisticasTab({ token }: { token: string }) {
   const { usuario } = useAuth()
@@ -86,56 +59,67 @@ export function EstadisticasTab({ token }: { token: string }) {
   const [empresas, setEmpresas] = useState<EmpresaDetalle[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [generando, setGenerando] = useState<Formato | null>(null)
+  const [generando, setGenerando] = useState<Trabajo | null>(null)
   const [avisoExport, setAvisoExport] = useState<string | null>(null)
-  const graficaRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
-    setCargando(true)
+    // `cargando` ya empieza en true; el token no cambia sin desmontar el panel.
     Promise.all([adminApi.obtenerEstadisticas(token), adminApi.listarEmpresasDetalle(token)])
       .then(([s, e]) => { setStats(s); setEmpresas(e) })
       .catch((err) => setError(err instanceof AuthError ? err.message : 'No se pudo cargar la información.'))
       .finally(() => setCargando(false))
   }, [token])
 
-  // Las secciones son la fuente única: alimentan la gráfica y los dos
-  // exportadores, así que el archivo nunca puede discrepar de la pantalla.
+  // Las secciones son la fuente única: alimentan las tres gráficas y los
+  // tres exportadores, así que un archivo nunca discrepa de la pantalla.
   const secciones = useMemo(
     () => (stats ? seccionesConDatos(construirSecciones(stats)) : []),
     [stats],
   )
 
-  async function exportar(formato: Formato) {
+  async function exportar(trabajo: Trabajo, soloVista?: Vista) {
     if (!stats) return
-    setGenerando(formato)
+    setGenerando(trabajo)
     setAvisoExport(null)
+    const fecha = selloFecha()
+    const admin = usuario ? `Generado por ${usuario.nombre}` : ''
+    let fallidas = 0
+
     try {
-      // La gráfica se rasteriza en el momento, para que el archivo lleve
-      // exactamente lo que el admin está viendo.
-      let grafica: Imagen | null = null
-      if (graficaRef.current) {
+      // Las gráficas se dibujan aparte, a un ancho fijo, para que el archivo
+      // salga igual sin importar el tamaño de la pantalla de quien lo baja.
+      const { imagenDeGrafica } = await import('../export/renderizarGraficas')
+      const imagen = async (vista: Vista, conEncabezado: boolean): Promise<Imagen | null> => {
         try {
-          grafica = await svgAPng(graficaRef.current, 2)
+          return await imagenDeGrafica(vista, secciones, { conEncabezado, fecha })
         } catch {
-          grafica = null
+          fallidas += 1
+          return null
         }
       }
-      const datos = {
-        stats, secciones, empresas, grafica,
-        admin: usuario ? `Generado por ${usuario.nombre}` : '',
-        fecha: selloFecha(),
-      }
-      // Import diferido: ExcelJS y docx pesan bastante y solo hacen falta
-      // cuando alguien pulsa el botón, no en cada carga de la aplicación.
-      if (formato === 'excel') {
-        const { descargarExcel } = await import('../export/excel')
-        await descargarExcel(datos)
+
+      if (trabajo === 'pdf' || trabajo === 'pdf-grafica') {
+        const vistas = soloVista ? [soloVista] : VISTAS.map((v) => v.id)
+        const graficas = []
+        for (const vista of vistas) graficas.push({ vista, imagen: await imagen(vista, false) })
+        // Import diferido: jsPDF solo se carga cuando alguien lo pide.
+        const { descargarPdfEstadisticas } = await import('../export/pdfEstadisticas')
+        await descargarPdfEstadisticas({
+          stats, secciones, graficas, completo: trabajo === 'pdf', admin, fecha,
+        })
       } else {
-        const { descargarWord } = await import('../export/word')
-        await descargarWord(datos)
+        const grafica = await imagen('barras', true)
+        const datos = { stats, secciones, empresas, grafica, admin, fecha }
+        if (trabajo === 'excel') {
+          const { descargarExcel } = await import('../export/excel')
+          await descargarExcel(datos)
+        } else {
+          const { descargarWord } = await import('../export/word')
+          await descargarWord(datos)
+        }
       }
-      if (!grafica && totalBarras(secciones) > 0) {
-        setAvisoExport('El archivo se descargó, pero la gráfica no pudo incrustarse en este navegador.')
+      if (fallidas > 0 && totalBarras(secciones) > 0) {
+        setAvisoExport('El archivo se descargó, pero alguna gráfica no pudo incrustarse en este navegador; sus datos sí van en las tablas.')
       }
     } catch {
       setAvisoExport('No se pudo generar el archivo. Vuelve a intentarlo.')
@@ -148,102 +132,57 @@ export function EstadisticasTab({ token }: { token: string }) {
   if (error) return <div className="auth-error" role="alert">{error}</div>
   if (!stats) return null
 
-  const maxSector = Math.max(1, ...stats.empresas_por_sector.map((s) => s.total))
-  const maxTamano = Math.max(1, ...stats.empresas_por_tamano.map((s) => s.total))
-  const maxEstado = Math.max(1, ...stats.diagnosticos_por_estado.map((s) => s.total))
-  const hayBarras = totalBarras(secciones) > 0
-
-  const NOMBRES_FORMATO: Record<string, string> = { iso26000: 'ISO 26000', ley2173: 'Ley 2173' }
-  const NOMBRES_ESTADO: Record<string, string> = { borrador: 'En borrador', completado: 'Completado', archivado: 'Archivado' }
+  const hayDatos = totalBarras(secciones) > 0
 
   return (
     <div className="estadisticas-tab">
-      <section className="resumen-grid">
+      <section className="resumen-grid" aria-label="Cifras principales">
         <TarjetaResumen etiqueta="Empresas registradas" valor={stats.resumen.empresas} />
         <TarjetaResumen etiqueta="Usuarios totales" valor={stats.resumen.usuarios} />
         <TarjetaResumen etiqueta="Diagnósticos completados" valor={stats.resumen.diagnosticos_completados} />
         <TarjetaResumen etiqueta="Diagnósticos iniciados" valor={stats.resumen.diagnosticos_totales} />
       </section>
 
-      <section className="card grafica-card">
-        <div className="eyebrow">Gráfica general</div>
-        <h2 className="title" style={{ fontSize: 18 }}>Todo el tablero en una sola vista</h2>
-        <p className="lede">
-          Cada banda es una distribución distinta. Las de conteo comparten el eje izquierdo;
-          la de madurez usa el eje derecho, en escala 0–4, porque un promedio y un conteo no
-          se pueden leer con la misma regla.
-        </p>
-        {hayBarras ? (
-          <div className="grafica-scroll">
-            <GraficaGeneral secciones={secciones} svgRef={graficaRef} />
-          </div>
-        ) : (
-          <p className="lede">Todavía no hay datos suficientes para dibujar la gráfica.</p>
-        )}
-      </section>
-
-      <section className="card">
-        <div className="eyebrow">Empresas por sector</div>
-        {stats.empresas_por_sector.length === 0 && <p className="lede">Todavía no hay empresas registradas.</p>}
-        {stats.empresas_por_sector.map((s) => (
-          <BarraHorizontal key={s.sector_id} etiqueta={s.nombre} valor={s.total} max={maxSector} />
-        ))}
-      </section>
-
-      <section className="card">
-        <div className="eyebrow">Empresas por tamaño</div>
-        {stats.empresas_por_tamano.length === 0 && <p className="lede">Todavía no hay tamizajes guardados.</p>}
-        {stats.empresas_por_tamano.map((s) => (
-          <BarraHorizontal key={s.tamano} etiqueta={s.tamano} valor={s.total} max={maxTamano} />
-        ))}
-      </section>
-
-      <section className="card">
-        <div className="eyebrow">Diagnósticos por estado</div>
-        {stats.diagnosticos_por_estado.length === 0 && <p className="lede">Todavía no hay diagnósticos iniciados.</p>}
-        {stats.diagnosticos_por_estado.map((s) => (
-          <BarraHorizontal
-            key={`${s.formato_id}-${s.estado}`}
-            etiqueta={`${NOMBRES_FORMATO[s.formato_id] ?? s.formato_id} · ${NOMBRES_ESTADO[s.estado] ?? s.estado}`}
-            valor={s.total} max={maxEstado}
-            color={s.estado === 'completado' ? VERDE_OSCURO : VERDE_MEDIO}
-          />
-        ))}
-      </section>
-
-      <section className="card">
-        <div className="eyebrow">Madurez promedio por dimensión (escala 0–4)</div>
-        {stats.promedio_por_dimension.length === 0 && <p className="lede">Todavía no hay respuestas registradas.</p>}
-        {stats.promedio_por_dimension.map((d) => (
-          <BarraHorizontal
-            key={`${d.formato_id}-${d.numero}`}
-            etiqueta={`${NOMBRES_FORMATO[d.formato_id] ?? d.formato_id} · ${d.dimension}`}
-            valor={d.promedio} max={4} sufijo={` (${d.respuestas} resp.)`}
-          />
-        ))}
-      </section>
+      {hayDatos ? (
+        <PanelGraficas
+          secciones={secciones}
+          generando={generando !== null}
+          onDescargarPdf={(vista) => void exportar('pdf-grafica', vista)}
+        />
+      ) : (
+        <section className="card">
+          <div className="eyebrow">Gráficas</div>
+          <p className="lede">Todavía no hay datos suficientes para dibujar las gráficas.</p>
+        </section>
+      )}
 
       <section className="card">
         <div className="eyebrow">Reporte</div>
         <h2 className="title" style={{ fontSize: 18 }}>Exportar estadísticas generales</h2>
         <p className="lede">
-          El Excel y el Word llevan el mismo contenido de esta pestaña: los indicadores, las
-          cuatro distribuciones, el detalle de cada empresa y la gráfica de arriba tal como se
-          ve ahora mismo.
+          Descarga todo lo de esta pestaña en el formato que necesites. Las gráficas salen
+          dibujadas a tamaño completo, sin importar el tamaño de tu pantalla.
         </p>
 
         <div className="export-acciones">
           <button
-            type="button" className="btn" disabled={generando !== null}
+            type="button" className="btn export-principal" disabled={generando !== null}
+            onClick={() => void exportar('pdf')}
+          >
+            <IconoDescarga tamano={17} />
+            {generando === 'pdf' ? 'Generando…' : 'Informe completo en PDF'}
+          </button>
+          <button
+            type="button" className="btn btn-dark" disabled={generando !== null}
             onClick={() => void exportar('excel')}
           >
-            {generando === 'excel' ? 'Generando…' : 'Descargar Excel (.xlsx)'}
+            {generando === 'excel' ? 'Generando…' : 'Excel (.xlsx)'}
           </button>
           <button
             type="button" className="btn btn-dark" disabled={generando !== null}
             onClick={() => void exportar('word')}
           >
-            {generando === 'word' ? 'Generando…' : 'Descargar Word (.docx)'}
+            {generando === 'word' ? 'Generando…' : 'Word (.docx)'}
           </button>
           <button
             type="button" className="btn-ghost" disabled={generando !== null || empresas.length === 0}
@@ -256,8 +195,9 @@ export function EstadisticasTab({ token }: { token: string }) {
         {avisoExport && <p className="export-aviso" role="status">{avisoExport}</p>}
 
         <ul className="export-detalle">
-          <li><strong>Excel</strong> — siete hojas con encabezado fijo y filtros: resumen con la gráfica, los datos que la componen, cada distribución por separado y el detalle de empresas.</li>
-          <li><strong>Word</strong> — informe editable con encabezado, pie numerado, tablas y la gráfica a página completa en horizontal.</li>
+          <li><strong>PDF</strong> — portada con las cifras principales y una lectura rápida, las tres gráficas (barras, pastel y campana) a página completa y las tablas con todos los datos. Para bajar una sola gráfica, usa el botón que está junto a ella.</li>
+          <li><strong>Excel</strong> — siete hojas con encabezado fijo y filtros: resumen con la gráfica de barras, los datos que la componen, cada distribución por separado y el detalle de empresas.</li>
+          <li><strong>Word</strong> — informe editable con encabezado, pie numerado, tablas y la gráfica de barras en una página horizontal.</li>
           <li><strong>CSV</strong> — la exportación de siempre, una fila por empresa.</li>
         </ul>
       </section>

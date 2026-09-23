@@ -177,6 +177,7 @@
 }
 .panel-identidad { display: flex; gap: 13px; align-items: flex-start; min-width: 0; }
 .panel-identidad .avatar { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.panel-identidad .avatar-foto { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35); }
 .panel-identidad-texto { min-width: 0; }
 .panel-identidad h2 {
   margin: 0; font-family: var(--display); font-size: 17px; font-weight: 700; color: #fff;
@@ -422,46 +423,17 @@
   border-left: 3px solid var(--nx-mid);
   padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;
 }
-.resumen-valor { font-size: 24px; font-weight: 700; color: var(--nx-dark); font-family: var(--display); }
-.resumen-etiqueta { font-size: 12px; color: var(--nx-muted); }
-
-.barra-fila {
-  display: grid; grid-template-columns: 200px 1fr 80px; align-items: center; gap: 12px;
-  padding: 7px 0;
-}
-.barra-etiqueta { font-size: 12.5px; color: var(--nx-text); overflow-wrap: anywhere; }
-.barra-valor { font-size: 12.5px; color: var(--nx-muted); text-align: right; font-family: var(--mono); }
-.barra-fila svg { display: block; width: 100%; height: auto; }
-
-@media (max-width: 640px) {
-  .barra-fila { grid-template-columns: 1fr; gap: 4px; }
-  .barra-valor { text-align: left; }
-}
-
-/* Gráfica general: una sola pieza ancha, con scroll propio cuando hay
-   muchas barras para no romper el ancho de la página. */
-.grafica-card { padding-bottom: 26px; }
-.grafica-scroll {
-  margin-top: 18px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-}
-.grafica-scroll svg { min-width: 720px; }
-.grafica-scroll::-webkit-scrollbar { height: 9px; }
-.grafica-scroll::-webkit-scrollbar-thumb {
-  background: var(--border-strong); border-radius: 999px;
-}
+.resumen-valor { font-size: 26px; font-weight: 700; color: var(--nx-dark); font-family: var(--display); }
+.resumen-etiqueta { font-size: 13px; color: var(--nx-muted); }
 
 /* Botonera de exportación */
 .export-acciones {
   display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; align-items: center;
 }
+.export-principal { display: inline-flex; align-items: center; gap: 8px; }
 .export-aviso {
-  margin: 14px 0 0; font-size: 13px; color: var(--nx-gold);
+  /* Texto en dorado oscuro: el dorado de la marca da 2,5:1 sobre blanco. */
+  margin: 14px 0 0; font-size: 13.5px; color: #8a5a00;
   border-left: 3px solid var(--nx-gold); padding-left: 10px;
 }
 .export-detalle {

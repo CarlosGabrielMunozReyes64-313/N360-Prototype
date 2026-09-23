@@ -275,9 +275,13 @@ export function construirDocumento(d: DatosInformeWord): Document {
   const anexo: (Paragraph | Table)[] = [titulo2('Gráfica general')]
 
   if (d.grafica) {
-    // Ancho útil en A4 horizontal con márgenes de 15 mm ≈ 267 mm ≈ 1009 px.
-    const anchoDestino = 1000
-    const altoDestino = Math.round((d.grafica.altoBase / d.grafica.anchoBase) * anchoDestino)
+    // Área útil en A4 horizontal con márgenes de 15 mm ≈ 267 × 180 mm
+    // ≈ 1009 × 680 px; se deja margen para el título. La gráfica de barras
+    // horizontales crece hacia abajo con cada fila, así que se encaja en
+    // ancho Y alto, conservando la proporción.
+    const proporcion = d.grafica.altoBase / d.grafica.anchoBase
+    const anchoDestino = Math.round(Math.min(1000, 600 / proporcion))
+    const altoDestino = Math.round(anchoDestino * proporcion)
     anexo.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 160 },
@@ -288,7 +292,7 @@ export function construirDocumento(d: DatosInformeWord): Document {
           transformation: { width: anchoDestino, height: altoDestino },
           altText: {
             name: 'Gráfica general',
-            description: 'Todas las distribuciones del panel en una sola gráfica de barras',
+            description: 'Todas las distribuciones del panel en barras horizontales: conteos y madurez promedio por dimensión',
             title: 'Estadísticas generales',
           },
         }),

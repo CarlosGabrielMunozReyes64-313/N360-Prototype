@@ -1,0 +1,234 @@
+/* Foto de perfil en «Mi cuenta» y editor para ajustarla. */
+
+/* ------------------------------------------------ fila de la foto */
+
+.perfil-foto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 20px;
+  margin-top: 22px;
+  padding: 16px 18px;
+  background: var(--nx-gray);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.perfil-foto.is-soltando {
+  background: var(--nx-light);
+  border-color: var(--nx-mid);
+  border-style: dashed;
+}
+
+.perfil-foto-avatar {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+.perfil-foto-avatar .avatar-foto { box-shadow: 0 0 0 3px #fff; }
+.perfil-foto-avatar:disabled { cursor: progress; }
+
+.perfil-foto-camara {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--nx-dark);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--nx-gray);
+  transition: background 0.15s;
+}
+.perfil-foto.is-soltando .perfil-foto-camara { box-shadow: 0 0 0 3px var(--nx-light); }
+.perfil-foto-avatar:hover:not(:disabled) .perfil-foto-camara { background: var(--nx-mid); }
+
+.perfil-foto-texto { flex: 1 1 200px; min-width: 0; }
+.perfil-foto-nombre {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--nx-dark);
+  overflow-wrap: anywhere;
+}
+.perfil-foto-nota {
+  margin: 3px 0 0;
+  max-width: 46ch;
+  font-size: 13px;
+  color: var(--nx-muted);
+}
+
+.perfil-foto-botones { display: flex; flex-wrap: wrap; gap: 8px; }
+.perfil-foto-botones .btn { padding: 9px 16px; font-size: 13.5px; }
+.perfil-foto-botones .btn-ghost { padding: 8px 14px; background: #fff; }
+
+.perfil-foto-aviso { flex-basis: 100%; margin: 0; }
+
+/* Separación del formulario de nombre y correo que viene debajo. */
+.cuenta-tab form { margin-top: 22px; }
+.cuenta-tab form .field + .field { margin-top: 16px; }
+
+@media (max-width: 560px) {
+  .perfil-foto-botones { flex-basis: 100%; }
+}
+
+/* ------------------------------------------------ editor (diálogo) */
+
+.editor-foto {
+  width: min(440px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--nx-text);
+  box-shadow: 0 30px 80px rgba(2, 40, 26, 0.35);
+  overflow: auto;
+}
+.editor-foto::backdrop {
+  background: rgba(2, 40, 26, 0.55);
+  backdrop-filter: blur(2px);
+}
+.editor-foto[open] { animation: editor-foto-entrar 0.16s ease-out; }
+@keyframes editor-foto-entrar {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+.editor-foto-cabecera { padding: 20px 22px 0; }
+.editor-foto-cabecera h2 { font-size: 18px; color: var(--nx-dark); }
+.editor-foto-cabecera p { margin: 5px 0 0; font-size: 13px; color: var(--nx-muted); }
+
+.editor-foto-cuerpo { padding: 16px 22px 0; }
+
+.editor-foto-visor {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #0b1c15;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.editor-foto-visor.is-moviendo { cursor: grabbing; }
+.editor-foto-visor:focus-visible { outline: 2px solid var(--nx-mid); outline-offset: 3px; }
+
+.editor-foto-lienzo {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.editor-foto-lienzo img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  pointer-events: none;
+}
+
+/* Todo lo que queda fuera del círculo se oscurece. */
+.editor-foto-mascara {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 999px rgba(6, 24, 17, 0.6);
+  pointer-events: none;
+}
+
+/* Líneas de tercios mientras se arrastra, para centrar la cara. */
+.editor-foto-guia {
+  --linea: rgba(255, 255, 255, 0.45);
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background:
+    linear-gradient(to right,
+      transparent calc(33.333% - 0.5px), var(--linea) calc(33.333% - 0.5px),
+      var(--linea) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px),
+      transparent calc(66.666% - 0.5px), var(--linea) calc(66.666% - 0.5px),
+      var(--linea) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px)),
+    linear-gradient(to bottom,
+      transparent calc(33.333% - 0.5px), var(--linea) calc(33.333% - 0.5px),
+      var(--linea) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px),
+      transparent calc(66.666% - 0.5px), var(--linea) calc(66.666% - 0.5px),
+      var(--linea) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px));
+}
+.editor-foto-visor.is-moviendo .editor-foto-guia { opacity: 1; }
+
+.editor-foto-estado {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.editor-foto-controles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.editor-foto-zoom {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--nx-mid);
+}
+.editor-foto-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--nx-text);
+}
+.editor-foto-icono:hover:not(:disabled) { border-color: var(--nx-mid); color: var(--nx-mid); }
+.editor-foto-icono:disabled { opacity: 0.4; cursor: not-allowed; }
+.editor-foto-divisor { width: 1px; height: 24px; background: var(--border); }
+
+.editor-foto-error { margin: 14px 0 0; }
+
+.editor-foto-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid var(--border);
+}
+.editor-foto-pie-acciones { display: flex; gap: 8px; }
+.editor-foto-restablecer {
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nx-muted);
+}
+.editor-foto-restablecer:hover:not(:disabled) { color: var(--nx-text); text-decoration: underline; }
+.editor-foto-restablecer:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 420px) {
+  .editor-foto-cabecera, .editor-foto-cuerpo { padding-left: 16px; padding-right: 16px; }
+  .editor-foto-pie { padding: 14px 16px 16px; flex-wrap: wrap; }
+  .editor-foto-pie-acciones { margin-left: auto; }
+}

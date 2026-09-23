@@ -1,0 +1,112 @@
+/* Tarjeta de gráficas del panel de admin (barras, pastel, campana). */
+
+.graficas-card { padding-bottom: 26px; }
+
+.graficas-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 20px;
+}
+.graficas-titulo { font-size: 21px; margin-top: 2px; }
+
+.graficas-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  font-size: 14px;
+}
+
+/* Selector de gráfica: pestañas tipo «control segmentado». */
+.graficas-vistas {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 4px;
+  background: var(--nx-gray);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+.graficas-vista {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--nx-muted);
+}
+.graficas-vista:hover { color: var(--nx-text); }
+.graficas-vista[aria-selected='true'] {
+  background: #fff;
+  color: var(--nx-dark);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 3px rgba(2, 64, 41, 0.12);
+}
+.graficas-vista[aria-selected='true'] svg { color: var(--nx-mid); }
+
+.graficas-descripcion { max-width: 76ch; font-size: 15px; margin-top: 14px; }
+
+/* El SVG se dibuja al ancho exacto de este contenedor (useAncho), así que
+   el texto sale siempre a su tamaño real. Por debajo de 300 px se desplaza. */
+.graficas-lienzo {
+  margin-top: 16px;
+  padding: 14px 0 8px;
+  min-height: 140px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+.graficas-lienzo svg { max-width: none; }
+
+/* Datos en tabla: alternativa en texto de cada gráfica. */
+.graficas-datos { margin-top: 16px; }
+.graficas-datos summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nx-dark);
+}
+.graficas-datos summary:hover { text-decoration: underline; }
+.graficas-tabla-scroll { overflow-x: auto; }
+.graficas-tabla {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.graficas-tabla caption {
+  padding: 12px 0 6px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--nx-text);
+}
+.graficas-tabla th,
+.graficas-tabla td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.graficas-tabla th {
+  background: var(--nx-gray);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--nx-text);
+}
+.graficas-tabla tbody tr:nth-child(even) td { background: #fafcfb; }
+.graficas-tabla .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .graficas-vistas { display: flex; }
+  .graficas-vista { flex: 1; justify-content: center; padding: 8px 6px; }
+  .graficas-pdf { width: 100%; justify-content: center; }
+}

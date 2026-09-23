@@ -4,6 +4,7 @@ import { AuthError } from '../auth/types'
 import * as adminApi from '../auth/adminApi'
 import { EstadisticasTab } from './EstadisticasTab'
 import { EmpresasTab } from './EmpresasTab'
+import { Avatar } from './Avatar'
 import type {
   UsuarioAdmin, ResumenSesiones, ActividadUsuario, MotivoCierre,
 } from '../auth/adminApi'
@@ -74,11 +75,6 @@ export function AdminPanel() {
 function formatearFecha(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
-}
-
-function iniciales(nombre: string): string {
-  const partes = nombre.trim().split(/\s+/).slice(0, 2)
-  return partes.map((p) => p[0] ?? '').join('').toUpperCase() || '?'
 }
 
 function TablaUsuarios({ token, adminId }: { token: string; adminId: string }) {
@@ -161,9 +157,10 @@ function TablaUsuarios({ token, adminId }: { token: string; adminId: string }) {
                   >
                     <td>
                       <div className="celda-usuario">
-                        <span className={'avatar' + (u.rol === 'admin' ? ' avatar--admin' : '')}>
-                          {iniciales(u.nombre)}
-                        </span>
+                        <Avatar
+                          usuarioId={u.usuario_id} nombre={u.nombre}
+                          fotoVersion={u.foto_actualizada_en} tamano={34}
+                        />
                         <div className="celda-usuario-texto">
                           <strong>{u.nombre}</strong>
                           <span>{u.email}</span>
@@ -289,9 +286,10 @@ function PanelUsuario({
       <aside className="panel-lateral" role="dialog" aria-label={`Gestionar ${u.nombre}`}>
         <header className="panel-cabecera">
           <div className="panel-identidad">
-            <span className={'avatar avatar--lg' + (u.rol === 'admin' ? ' avatar--admin' : '')}>
-              {iniciales(u.nombre)}
-            </span>
+            <Avatar
+              usuarioId={u.usuario_id} nombre={u.nombre}
+              fotoVersion={u.foto_actualizada_en} tamano={46}
+            />
             <div className="panel-identidad-texto">
               <h2>{u.nombre}</h2>
               <p className="panel-email">{u.email}</p>
@@ -604,9 +602,10 @@ function PestanaActividad({ token }: { token: string }) {
                 <tr key={u.usuario_id} className={u.archivado_en ? 'fila-eliminada' : ''}>
                   <td>
                     <div className="celda-usuario">
-                      <span className={'avatar' + (u.rol === 'admin' ? ' avatar--admin' : '')}>
-                        {iniciales(u.nombre)}
-                      </span>
+                      <Avatar
+                        usuarioId={u.usuario_id} nombre={u.nombre}
+                        fotoVersion={u.foto_actualizada_en} tamano={34}
+                      />
                       <div className="celda-usuario-texto">
                         <strong>{u.nombre}</strong>
                         <span>{u.email}</span>
@@ -688,9 +687,10 @@ function VistaActividad({
       <button type="button" className="btn-volver" onClick={onVolver}>← Volver a la lista</button>
 
       <header className="detalle-cabecera">
-        <span className={'avatar avatar--lg' + (u.rol === 'admin' ? ' avatar--admin' : '')}>
-          {iniciales(u.nombre)}
-        </span>
+        <Avatar
+          usuarioId={u.usuario_id} nombre={u.nombre}
+          fotoVersion={u.foto_actualizada_en} tamano={46}
+        />
         <div>
           <h2>{u.nombre}</h2>
           <p className="detalle-email">{u.email}</p>

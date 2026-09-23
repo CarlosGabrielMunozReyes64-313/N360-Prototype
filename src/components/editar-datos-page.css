@@ -21,7 +21,13 @@
   padding: 0 24px;
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid var(--border);
+  /* La línea base va como sombra interna (y no border-bottom) para que el
+     subrayado de la pestaña activa la tape sin salirse del contenedor:
+     en pantallas angostas las pestañas se desplazan en vez de partirse, y
+     overflow-x recortaría cualquier cosa que sobresalga. */
+  box-shadow: inset 0 -1px 0 var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .editar-tab {
@@ -32,7 +38,8 @@
   font-weight: 600;
   color: var(--nx-muted);
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  flex: none;
+  white-space: nowrap;
 }
 .editar-tab:hover { color: var(--nx-text); }
 .editar-tab.is-on { color: var(--nx-mid); border-bottom-color: var(--nx-mid); }

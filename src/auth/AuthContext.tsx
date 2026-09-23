@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react'
 import * as api from './api'
 import { AuthError } from './types'
+import { limpiarFotos, olvidarFoto, sembrarFoto } from '../perfil/fotoCache'
 import type { LoginPayload, RegistroPayload, Usuario } from './types'
 
 const STORAGE_KEY = 'n360_sesion'
@@ -24,6 +25,10 @@ interface AuthState {
   /** Cambia nombre y/o correo; actualiza la sesión guardada al terminar. */
   actualizarPerfil: (payload: api.ActualizarPerfilPayload) => Promise<void>
   cambiarPassword: (payload: api.CambiarPasswordPayload) => Promise<void>
+  /** Sube la foto de perfil (ya recortada) y actualiza la sesión. */
+  subirFoto: (foto: Blob) => Promise<void>
+  /** Quita la foto propia: el usuario vuelve a su foto predeterminada. */
+  quitarFoto: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -112,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null)
     setToken(null)
     guardarSesion(null)
+    limpiarFotos()
   }, [token])
 
   const actualizarPerfil = useCallback(async (payload: api.ActualizarPerfilPayload) => {
@@ -140,14 +146,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token])
 
+  const subirFoto = useCallback(async (foto: Blob) => {
+    if (!token) throw new AuthError('CREDENCIALES_INVALIDAS', 'No hay una sesión activa.')
+    const res = await api.subirFotoPerfil(token, foto)
+    // La imagen ya está en memoria: se muestra al instante con la versión
+    // nueva, sin volver a descargar lo que se acaba de subir.
+    if (res.usuario.foto_actualizada_en) {
+      sembrarFoto(res.usuario.usuario_id, res.usuario.foto_actualizada_en, foto)
+    }
+    setUsuario(res.usuario)
+    guardarSesion({ token, usuario: res.usuario })
+  }, [token])
+
+  const quitarFoto = useCallback(async () => {
+    if (!token) throw new AuthError('CREDENCIALES_INVALIDAS', 'No hay una sesión activa.')
+    const res = await api.quitarFotoPerfil(token)
+    olvidarFoto(res.usuario.usuario_id)
+    setUsuario(res.usuario)
+    guardarSesion({ token, usuario: res.usuario })
+  }, [token])
+
   const limpiarError = useCallback(() => setError(null), [])
 
   const value = useMemo<AuthState>(() => ({
     usuario, token, cargando, error, login, registrar: registrarUsuario, logout, limpiarError,
-    actualizarPerfil, cambiarPassword: cambiarPasswordCtx,
+    actualizarPerfil, cambiarPassword: cambiarPasswordCtx, subirFoto, quitarFoto,
   }), [
     usuario, token, cargando, error, login, registrarUsuario, logout, limpiarError,
-    actualizarPerfil, cambiarPasswordCtx,
+    actualizarPerfil, cambiarPasswordCtx, subirFoto, quitarFoto,
   ])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

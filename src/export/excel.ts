@@ -158,8 +158,9 @@ function hojaResumen(
       base64: grafica.dataUrl.slice(grafica.dataUrl.indexOf(',') + 1),
       extension: 'png',
     })
-    // Se limita el ancho para que quepa en pantalla sin obligar a hacer zoom.
-    const anchoDestino = Math.min(980, grafica.anchoBase)
+    // Se limita el ancho para que quepa en pantalla sin obligar a hacer zoom
+    // (y el alto, porque las barras horizontales crecen hacia abajo).
+    const anchoDestino = Math.min(980, grafica.anchoBase, 900 * (grafica.anchoBase / grafica.altoBase))
     const altoDestino = (grafica.altoBase / grafica.anchoBase) * anchoDestino
     hoja.addImage(id, {
       tl: { col: 1, row: 12 },

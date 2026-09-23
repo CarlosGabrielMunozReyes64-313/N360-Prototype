@@ -1,5 +1,5 @@
 import type { Estadisticas } from '../auth/adminApi'
-import { clasificar } from '../data/escala'
+import { COLOR_CONTEO, nivelDe } from './graficas'
 
 /**
  * Punto único donde las cuatro distribuciones del panel se vuelven una
@@ -35,6 +35,10 @@ export interface Barra {
   color: string
   /** Aclaración opcional (p. ej. cuántas respuestas sostienen el promedio). */
   nota: string
+  /** Subgrupo dentro de la sección (en madurez: el formato, ISO o Ley). */
+  grupo?: string
+  /** Número de respuestas detrás de un promedio (pondera la campana). */
+  peso?: number
 }
 
 export interface Seccion {
@@ -48,11 +52,12 @@ export interface Seccion {
   barras: Barra[]
 }
 
+// Todos con contraste ≥ 3:1 contra blanco (ver engine/graficas.ts). El
+// verde medio y el dorado de la marca no llegaban (3,0 y 2,5).
 const VERDE_OSCURO = '#024029'
-const VERDE_MEDIO = '#04a97a'
-const TEAL = '#025873'
-const ORO = '#d99521'
-const GRIS = '#9fb3aa'
+const TEAL = COLOR_CONTEO
+const ORO = '#c5881e'
+const GRIS = '#6b7a74'
 
 /** Recorta sin partir palabras a la mitad cuando se puede. */
 export function acortar(texto: string, max = 26): string {
@@ -89,14 +94,14 @@ export function construirSecciones(s: Estadisticas): Seccion[] {
       titulo: 'Empresas por sector',
       escala: 'conteo',
       unidad: 'empresas',
-      color: VERDE_MEDIO,
+      color: TEAL,
       vacio: 'Todavía no hay empresas registradas.',
       barras: s.empresas_por_sector.map((x) => ({
         clave: `sector-${x.sector_id}`,
         etiqueta: acortar(x.nombre),
         etiquetaLarga: x.nombre,
         valor: x.total,
-        color: VERDE_MEDIO,
+        color: TEAL,
         nota: '',
       })),
     },
@@ -141,7 +146,7 @@ export function construirSecciones(s: Estadisticas): Seccion[] {
       titulo: 'Madurez promedio por dimensión',
       escala: 'madurez',
       unidad: 'escala 0–4',
-      color: VERDE_MEDIO,
+      color: VERDE_OSCURO,
       vacio: 'Todavía no hay respuestas registradas.',
       barras: s.promedio_por_dimension.map((d) => {
         const formato = NOMBRES_FORMATO[d.formato_id] ?? d.formato_id
@@ -151,8 +156,10 @@ export function construirSecciones(s: Estadisticas): Seccion[] {
           etiquetaLarga: `${formato} · ${d.numero}. ${d.dimension}`,
           valor: d.promedio,
           // El color dice el nivel, igual que en el informe de empresa.
-          color: clasificar(d.promedio).color,
+          color: nivelDe(d.promedio).color,
           nota: `${d.respuestas} resp.`,
+          grupo: formato,
+          peso: d.respuestas,
         }
       }),
     },

@@ -24,8 +24,34 @@ src/
   engine/scoring.ts        pesos, N/A, cobertura, banderas, lectura cruzada, plan
   export/pdf.ts            informe en PDF vectorial
   components/              pantallas y el control de escala
+  components/MenuCuenta    menú de la foto de perfil (Configuración, Cerrar sesión)
+  components/FotoPerfil    foto en «Mi cuenta» + EditorFoto (encuadre, zoom, giro)
+  perfil/                  foto predeterminada, recorte y caché de fotos
 pruebas/motor.ts           53 aserciones sobre la aritmética del motor
 ```
+
+## Cuenta y foto de perfil
+
+Arriba a la derecha, la foto de perfil abre el menú de la cuenta: nombre,
+correo, empresa y NIT, y las opciones **Configuración** y **Cerrar sesión**.
+Configuración abre en la pestaña **Mi cuenta** (foto, nombre, correo,
+contraseña); le siguen **Datos y tamizaje** (solo cuando ya se completaron
+una vez) e **Historial de cambios**.
+
+- **Foto predeterminada**: todo usuario tiene una desde que se registra —
+  sus iniciales sobre un color que sale de su `usuario_id`, así que es
+  siempre la misma (`src/perfil/avatarPredeterminado.ts`). No se guarda.
+- **Foto propia**: se elige (o se arrastra) en Mi cuenta y se encuadra en
+  el editor antes de guardar: arrastrar, zoom (barra, rueda o pellizco),
+  girar 90°, restablecer; también con teclado (flechas, + y −). El recorte
+  se hace en el navegador (`src/perfil/recorte.ts`) y se sube un cuadrado
+  de 512 px; el backend lo vuelve a validar y codificar.
+- **Cómo se muestran**: la foto viaja con el token, así que se descarga
+  como Blob y se cachea en memoria (`src/perfil/fotoCache.ts`) — una sola
+  descarga por usuario y versión, y se limpia al cerrar sesión. El panel
+  de admin usa el mismo componente `<Avatar>`.
+
+Requiere el backend con la migración `008_foto_perfil.sql` aplicada.
 
 ## Reglas que el motor implementa
 
@@ -56,3 +82,24 @@ criterios de exclusión en el conteo de empleados, plazo vigente de delimitació
 tras la Resolución 0358 de 2026, régimen sancionatorio y modalidad de asocio.
 Los pesos sectoriales de `PESOS_SECTOR` son un juicio de materialidad, no una
 lectura de la norma, y deben poder editarse desde administración.
+
+## Estadísticas del panel de admin (gráficas)
+
+La pestaña «Estadísticas generales» tiene tres gráficas de los mismos datos,
+en pestañas: **Barras** (horizontales, conteos y madurez en paneles con su
+propio eje), **Pastel** (un pastel por reparto de un total) y **Campana**
+(curva normal de la madurez por formato, con un punto por dimensión).
+Cada una se descarga sola en PDF, y el informe completo en PDF lleva
+portada, las tres gráficas y las tablas.
+
+- **Accesibilidad**: todo relleno tiene contraste ≥ 3:1 y todo texto
+  ≥ 4,5:1 (lo verifica `pruebas/graficas.test.ts`); los colores se eligieron
+  midiendo su separación también con deuteranopía y protanopía, y el color
+  nunca va solo (valor y nivel escritos, porcentajes en cada rebanada,
+  trazo y forma distintos por curva). Cada gráfica tiene su tabla de datos.
+- **Tamaño real**: las gráficas se dibujan al ancho del contenedor
+  (`useAncho`), así el texto no se encoge en pantallas angostas. Para los
+  archivos se dibujan fuera de pantalla a 1100 px (`renderizarGraficas.tsx`),
+  así un PDF sale igual desde un celular o un monitor.
+- Lógica pura en `src/engine/graficas.ts` y `src/engine/vistasGraficas.ts`;
+  el PDF en `src/export/pdfEstadisticas.ts`.

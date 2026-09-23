@@ -1,22 +1,7 @@
-/* Estilos de la fila de cuenta en el header (reemplaza la barra flotante de
-   sesión anterior) y ajuste puntual para nav-footer con un solo botón.
-   Archivo propio para no tocar index.css. */
-
-.header-cuenta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.company-tag--clic {
-  cursor: pointer;
-  font-family: var(--mono);
-  background: #fff;
-  transition: border-color 0.15s;
-}
-.company-tag--clic:hover { border-color: var(--nx-mid); }
-.company-tag--clic:focus-visible { outline: 2px solid var(--nx-mid); outline-offset: 2px; }
+/* Fila de sesión del panel de admin y ajuste puntual para nav-footer con
+   un solo botón. Archivo propio para no tocar index.css.
+   (La cuenta del header de empresas ahora es el menú de la foto de
+   perfil: ver components/menu-cuenta.css.) */
 
 .sesion-tag {
   display: flex;

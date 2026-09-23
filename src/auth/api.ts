@@ -143,3 +143,57 @@ export interface CambiarPasswordPayload {
 export async function cambiarPassword(token: string, payload: CambiarPasswordPayload): Promise<void> {
   return post<void>('/auth/change-password', payload, token)
 }
+
+// ---------------------------------------------------------------------
+// Foto de perfil
+// ---------------------------------------------------------------------
+
+/** PUT /auth/me/foto — sube la foto ya recortada (binario, no multipart).
+ * El backend la vuelve a validar y codificar; devuelve el usuario con la
+ * nueva `foto_actualizada_en`. */
+export async function subirFotoPerfil(
+  token: string, foto: Blob,
+): Promise<{ usuario: SesionRespuesta['usuario'] }> {
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}/auth/me/foto`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': foto.type || 'application/octet-stream',
+        Authorization: `Bearer ${token}`,
+      },
+      body: foto,
+    })
+  } catch {
+    throw new AuthError('RED', 'No se pudo conectar con el servidor.')
+  }
+  if (!res.ok) throw await parseError(res)
+  return res.json()
+}
+
+/** DELETE /auth/me/foto — vuelve a la foto predeterminada. */
+export async function quitarFotoPerfil(token: string): Promise<{ usuario: SesionRespuesta['usuario'] }> {
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}/auth/me/foto`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new AuthError('RED', 'No se pudo conectar con el servidor.')
+  }
+  if (!res.ok) throw await parseError(res)
+  return res.json()
+}
+
+/** GET /usuarios/{id}/foto — la foto va con el token, así que no se puede
+ * poner la URL directo en un <img>: se descarga como Blob. `version` hace
+ * que la URL cambie cuando cambia la foto (el backend la marca inmutable). */
+export async function descargarFotoUsuario(token: string, usuarioId: string, version: string): Promise<Blob> {
+  const res = await fetch(
+    `${API_URL}/usuarios/${encodeURIComponent(usuarioId)}/foto?v=${encodeURIComponent(version)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  )
+  if (!res.ok) throw await parseError(res)
+  return res.blob()
+}

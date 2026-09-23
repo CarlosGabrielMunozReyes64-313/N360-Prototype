@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { AuthError } from "../auth/types";
+import { FotoPerfil } from "./FotoPerfil";
 
 export function MiCuentaTab() {
   const { usuario, actualizarPerfil, cambiarPassword } = useAuth();
@@ -80,7 +81,11 @@ export function MiCuentaTab() {
       <section className="card">
         <div className="eyebrow">Mi cuenta</div>
         <h1 className="title">Datos de la cuenta</h1>
-        <p className="lede">Nombre y correo con los que iniciaste sesión.</p>
+        <p className="lede">
+          Tu foto de perfil, y el nombre y correo con los que inicias sesión.
+        </p>
+
+        <FotoPerfil />
 
         <form onSubmit={guardarPerfil} noValidate>
           <div className="field">

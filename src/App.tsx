@@ -12,6 +12,7 @@ import { MenuFormatos } from './components/MenuFormatos'
 import { Cuestionario } from './components/Cuestionario'
 import { Resultados } from './components/Resultados'
 import { EditarDatosPage } from './components/EditarDatosPage'
+import { MenuCuenta } from './components/MenuCuenta'
 import { useAuth } from './auth/AuthContext'
 import { guardarEmpresa, guardarRespuestas } from './auth/empresaApi'
 import './topbar.css'
@@ -231,8 +232,8 @@ export default function App({ usuario, onLogout }: Props) {
 
   const irA = (i: number) => {
     // Una vez completados perfil+tamizaje, esos dos pasos quedan bloqueados
-    // en la barra de pasos: la única forma de cambiarlos es el modal de
-    // edición (clic en el nombre de la empresa, arriba).
+    // en la barra de pasos: la única forma de cambiarlos es Configuración
+    // (menú de la foto de perfil, arriba) → «Datos y tamizaje».
     if (completadoUnaVez && i < 2 && i !== paso) return
     if (i <= paso || (i === paso + 1 && puedeAvanzar(paso))) {
       setPaso(i); setAbierto(null); window.scrollTo(0, 0)
@@ -260,6 +261,7 @@ export default function App({ usuario, onLogout }: Props) {
         perfil={perfil}
         tamizaje={tamizaje}
         historial={historial}
+        puedeEditarDatos={completadoUnaVez}
         onEnviar={guardarEdicion}
         onVolver={() => setEditando(false)}
       />
@@ -275,23 +277,14 @@ export default function App({ usuario, onLogout }: Props) {
             <div className="brand-sub">Diagnóstico normativo · ISO 26000 y Ley 2173</div>
           </div>
 
-          <div className="header-cuenta">
-            {perfil.razonSocial && (
-              <button
-                type="button"
-                className="company-tag company-tag--clic"
-                onClick={() => setEditando(true)}
-                title={completadoUnaVez ? 'Editar datos de la empresa y el tamizaje' : 'Datos de la empresa'}
-              >
-                <strong>{perfil.razonSocial}</strong>
-                {perfil.nit && `NIT ${perfil.nit}${perfil.dv ? '-' + perfil.dv : ''}`}
-              </button>
-            )}
-            <div className="sesion-tag">
-              <span>Sesión: <strong>{usuario.nombre}</strong></span>
-              <button type="button" className="btn-ghost btn-sm" onClick={onLogout}>Cerrar sesión</button>
-            </div>
-          </div>
+          <MenuCuenta
+            usuario={usuario}
+            empresa={perfil.razonSocial
+              ? { razonSocial: perfil.razonSocial, nit: perfil.nit, dv: perfil.dv }
+              : null}
+            onConfiguracion={() => { setEditando(true); window.scrollTo(0, 0) }}
+            onCerrarSesion={onLogout}
+          />
         </div>
 
         <ul className="stepper">

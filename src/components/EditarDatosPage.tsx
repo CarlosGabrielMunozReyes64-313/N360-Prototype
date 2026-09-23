@@ -12,29 +12,37 @@ interface Props {
   perfil: Perfil
   tamizaje: Tamizaje
   historial: HistorialEntrada[]
+  /** false mientras la empresa no haya completado perfil + tamizaje por
+   * primera vez: esos datos se llenan en el asistente, no aquí. */
+  puedeEditarDatos: boolean
   onEnviar: (perfil: Perfil, tamizaje: Tamizaje) => void
   onVolver: () => void
 }
 
 /**
- * Vista completa (no modal/flotante) para:
- * - editar perfil + tamizaje, con un botón final "Enviar" que reemplaza
- *   los datos activos (guardando la versión anterior en el historial),
- * - consultar el historial de cambios (solo lectura, nada para borrar),
- * - gestionar la cuenta (nombre, correo, contraseña).
+ * Configuración (se abre desde el menú de la foto de perfil). Vista
+ * completa, no modal, con tres pestañas:
+ * - Mi cuenta (la primera y la que se abre por defecto): foto de perfil,
+ *   nombre, correo y contraseña;
+ * - Datos y tamizaje: editar perfil + tamizaje, con un botón final
+ *   "Enviar" que reemplaza los datos activos (guardando la versión
+ *   anterior en el historial);
+ * - Historial de cambios: solo lectura, nada para borrar.
  *
  * No toca Cuestionario, Resultados, Radar ni la generación de PDF.
  */
-export function EditarDatosPage({ perfil, tamizaje, historial, onEnviar, onVolver }: Props) {
-  const [pestana, setPestana] = useState<Pestana>('datos')
+export function EditarDatosPage({
+  perfil, tamizaje, historial, puedeEditarDatos, onEnviar, onVolver,
+}: Props) {
+  const [pestana, setPestana] = useState<Pestana>('cuenta')
   const [subpaso, setSubpaso] = useState<0 | 1>(0)
   const [draftPerfil, setDraftPerfil] = useState<Perfil>(perfil)
   const [draftTamizaje, setDraftTamizaje] = useState<Tamizaje>(tamizaje)
 
   const TABS: { id: Pestana; label: string }[] = [
-    { id: 'datos', label: 'Datos y tamizaje' },
-    { id: 'historial', label: 'Historial de cambios' },
     { id: 'cuenta', label: 'Mi cuenta' },
+    ...(puedeEditarDatos ? [{ id: 'datos' as const, label: 'Datos y tamizaje' }] : []),
+    { id: 'historial', label: 'Historial de cambios' },
   ]
 
   return (
@@ -50,6 +58,7 @@ export function EditarDatosPage({ perfil, tamizaje, historial, onEnviar, onVolve
             key={t.id}
             type="button"
             className={'editar-tab' + (pestana === t.id ? ' is-on' : '')}
+            aria-current={pestana === t.id ? 'page' : undefined}
             onClick={() => setPestana(t.id)}
           >
             {t.label}
@@ -58,7 +67,7 @@ export function EditarDatosPage({ perfil, tamizaje, historial, onEnviar, onVolve
       </nav>
 
       <main className="editar-pagina-body">
-        {pestana === 'datos' && subpaso === 0 && (
+        {pestana === 'datos' && puedeEditarDatos && subpaso === 0 && (
           <PerfilPaso
             perfil={draftPerfil}
             onChange={setDraftPerfil}
@@ -68,7 +77,7 @@ export function EditarDatosPage({ perfil, tamizaje, historial, onEnviar, onVolve
           />
         )}
 
-        {pestana === 'datos' && subpaso === 1 && (
+        {pestana === 'datos' && puedeEditarDatos && subpaso === 1 && (
           <TamizajePaso
             tamizaje={draftTamizaje}
             onChange={setDraftTamizaje}
