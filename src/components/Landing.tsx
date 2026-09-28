@@ -38,11 +38,11 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
         <div className="lp-wrap lp-hero-in">
           <div>
             <span className="lp-tag">Para empresas en Colombia</span>
-            <h1 className="lp-h1">Sabe en qué punto está tu empresa frente a la norma</h1>
+            <h1 className="lp-h1">Reconoce lo que tu empresa ya hace y elige qué fortalecer</h1>
             <p className="lp-lead">
-              NEXUS 360° evalúa tu gestión de responsabilidad social frente a la ISO 26000
-              y la Ley 2173 de 2021, y te entrega un informe con el nivel de cumplimiento
-              por área y las acciones que quedan pendientes.
+              El Autodiagnóstico RSE Express de NEXUS 360° recorre las siete materias de la
+              ISO 26000 con preguntas abiertas y en lenguaje sencillo. Te entrega un mapa de
+              tus prácticas, fortalezas y oportunidades, y te ayuda a priorizar un reto.
             </p>
             <div className="lp-cta">
               <button type="button" className="lp-btn lp-btn-primary lp-btn-lg" onClick={onCrearCuenta}>
@@ -53,7 +53,7 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
               </button>
             </div>
             <p className="lp-note">
-              El diagnóstico se guarda a medida que avanzas y puedes retomarlo cuando quieras.
+              Es un autodiagnóstico, no una auditoría. Se guarda a medida que avanzas y puedes retomarlo cuando quieras.
             </p>
           </div>
 
@@ -61,16 +61,16 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
           <div
             className="lp-sample"
             role="img"
-            aria-label="Ejemplo de informe con el nivel de cumplimiento por área"
+            aria-label="Ejemplo de mapa de prácticas por materia"
           >
             <div className="lp-sample-head">
               <div>
-                <h3>Diagnóstico de ejemplo</h3>
-                <p>Empresa mediana · sector manufactura</p>
+                <h3>Mapa de ejemplo</h3>
+                <p>Empresa pequeña · 24 personas · servicios</p>
               </div>
               <div className="lp-score">
-                <b>62%</b>
-                <span>cumplimiento</span>
+                <b>11</b>
+                <span>prácticas que ya realiza</span>
               </div>
             </div>
 
@@ -78,7 +78,7 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
               <div className="lp-row" key={b.area}>
                 <div className="lp-row-top">
                   <span>{b.area}</span>
-                  <span>{b.valor}%</span>
+                  <span>{b.etiqueta}</span>
                 </div>
                 <div className="lp-track">
                   <i className={`lp-fill lp-fill--${nivel(b.valor)}`} style={{ width: `${b.valor}%` }} />
@@ -87,7 +87,7 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
             ))}
 
             <p className="lp-sample-foot">
-              Datos de ejemplo. Tu informe se genera con las respuestas de tu empresa.
+              Datos de ejemplo. Tu mapa se construye con lo que cuentas de tu empresa; no es un puntaje de cumplimiento.
             </p>
           </div>
         </div>
@@ -96,10 +96,10 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
       {/* ------------------------------------------------ qué se evalúa */}
       <section className="lp-sec">
         <div className="lp-wrap">
-          <h2 className="lp-h2">Qué se evalúa</h2>
+          <h2 className="lp-h2">Qué se conversa</h2>
           <p className="lp-intro">
-            Dos marcos distintos: uno voluntario que ordena la gestión social de la empresa,
-            y uno obligatorio con una exigencia concreta y verificable.
+            Primero conocemos qué hace realmente tu empresa; después identificamos qué puede
+            fortalecer. Tres preguntas abiertas por materia, con ejemplos que ayudan a recordar.
           </p>
 
           <div className="lp-two">
@@ -116,24 +116,24 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
                 <li>Participación activa y desarrollo de la comunidad</li>
               </ul>
               <p className="lp-fine">
-                La ISO 26000 es una guía, no una norma certificable. El resultado es un
-                autodiagnóstico de tu gestión, no un certificado.
+                La ISO 26000 es una guía, no una norma certificable. La materia de consumidores
+                solo aplica si vendes a personas u hogares.
               </p>
             </article>
 
             <article className="lp-card">
-              <h3 className="lp-h3">Ley 2173 de 2021</h3>
-              <p className="lp-sub">Restauración ecológica · obligatoria para medianas y grandes</p>
+              <h3 className="lp-h3">Cómo funciona el RSE Express</h3>
+              <p className="lp-sub">Unos 30 a 40 minutos · pensado para micro, pequeñas y medianas empresas</p>
               <ul className="lp-list">
-                <li>Programa anual de siembra de árboles nativos</li>
-                <li>Siembra en las Áreas de Vida definidas por la autoridad</li>
-                <li>Articulación con la alcaldía y la autoridad ambiental</li>
-                <li>Costos del programa a cargo de la empresa</li>
-                <li>Registro y seguimiento de lo sembrado</li>
+                <li>Cuatro preguntas para conocer tu empresa (tamaño, personas, territorio y clientes)</li>
+                <li>Por cada pregunta: tu respuesta, ejemplos opcionales y en qué punto estás</li>
+                <li>«Hacemos algo diferente» y «No aplica» también son respuestas válidas</li>
+                <li>Una pregunta por materia sobre lo que te gustaría fortalecer</li>
+                <li>Matriz para priorizar oportunidades y elegir un reto</li>
               </ul>
               <p className="lp-fine">
-                Reglamentada por la Resolución 1491 del 17 de octubre de 2025 del Ministerio
-                de Ambiente. Voluntaria para micro y pequeñas empresas.
+                Los temas con implicaciones legales (seguridad y salud en el trabajo, datos
+                personales, Ley 2173) se muestran como alertas informativas, no como sanción.
               </p>
             </article>
           </div>
@@ -209,12 +209,13 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
 
 /* ------------------------------------------------------------ datos */
 
+// El ancho solo dibuja la forma del ejemplo; en pantalla se lee la etiqueta.
 const BARRAS = [
-  { area: 'Gobernanza de la organización', valor: 84 },
-  { area: 'Prácticas laborales', valor: 71 },
-  { area: 'Medio ambiente', valor: 48 },
-  { area: 'Programa de siembra (Ley 2173)', valor: 25 },
-  { area: 'Desarrollo de la comunidad', valor: 66 },
+  { area: 'Gobernanza organizacional', valor: 80, etiqueta: 'Fortaleza' },
+  { area: 'Prácticas laborales', valor: 70, etiqueta: 'Fortaleza' },
+  { area: 'Medio ambiente', valor: 50, etiqueta: 'En desarrollo' },
+  { area: 'Prácticas justas de operación', valor: 30, etiqueta: 'Oportunidad' },
+  { area: 'Comunidad y territorio', valor: 55, etiqueta: 'En desarrollo' },
 ]
 
 function nivel(v: number): 'alto' | 'medio' | 'bajo' {
@@ -227,35 +228,35 @@ const PASOS = [
   {
     titulo: 'Registra tu empresa',
     texto:
-      'Sector, tamaño y número de empleados. Con eso se define qué normativa te aplica y cuáles preguntas verás.',
+      'Datos básicos y cuatro preguntas sobre tu realidad: tamaño, personas, territorio y clientes. Sin documentos ni cifras exactas.',
   },
   {
-    titulo: 'Responde el cuestionario',
+    titulo: 'Cuenta lo que hace tu empresa',
     texto:
-      'Preguntas en lenguaje claro, agrupadas por área. Se guarda a medida que avanzas y lo puede continuar otra persona del equipo.',
+      'Preguntas abiertas en lenguaje claro, agrupadas por materia. Se guarda a medida que avanzas y lo puede continuar otra persona del equipo.',
   },
   {
-    titulo: 'Recibe el informe',
+    titulo: 'Recibe tu mapa y prioriza',
     texto:
-      'Nivel de cumplimiento por área, brechas priorizadas y un plan de acción que puedes descargar y presentar a gerencia.',
+      'Un mapa de prácticas, fortalezas y oportunidades, y una matriz para elegir el reto que trabajarás con NEXUS.',
   },
 ]
 
 const ENTREGA = [
   {
-    titulo: 'Resultado por área',
+    titulo: 'Mapa de prácticas',
     texto:
-      'El puntaje de cada materia de la ISO 26000 y del componente de Ley 2173, para ver dónde está la debilidad real.',
+      'Lo que tu empresa ya hace en cada materia de la ISO 26000, con tus propias palabras y sin un puntaje de cumplimiento.',
   },
   {
-    titulo: 'Brechas priorizadas',
+    titulo: 'Fortalezas y oportunidades',
     texto:
-      'Qué falta, ordenado por lo que más pesa en el cumplimiento y por lo que es exigible por ley.',
+      'Qué puedes empezar, formalizar, fortalecer o ampliar, con alternativas concretas para conversar.',
   },
   {
-    titulo: 'Plan de acción descargable',
+    titulo: 'Matriz de priorización',
     texto:
-      'Acciones concretas con su área responsable, en un documento listo para llevar a comité.',
+      'Califica importancia, viabilidad, potencial e interés, y elige la oportunidad que se convertirá en tu reto.',
   },
   {
     titulo: 'Histórico de la empresa',

@@ -1,3 +1,8 @@
+import { ORDEN_ETAPA, nombreEtapa } from '../engine/agregados'
+import { etiquetaEtapa } from '../data/escala'
+import { etapaDesdeApi } from '../auth/empresaApi'
+import type { Tamano, TipoCliente } from '../types'
+import { nombreCliente, nombreTamano, nombresVinculacion, nombresZonas } from '../data/tamizaje'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import type { EmpresaDetalle, Estadisticas } from '../auth/adminApi'
@@ -219,7 +224,96 @@ export async function construirLibro(d: DatosReporte): Promise<ExcelJS.Workbook>
       { titulo: 'Tamaño', ancho: 24 },
       { titulo: 'Empresas', ancho: 12 },
     ],
-    d.stats.empresas_por_tamano.map((s) => [s.tamano, s.total]),
+    d.stats.empresas_por_tamano.map((s) => [nombreTamano(s.tamano as Tamano), s.total]),
+  )
+
+  agregarTabla(
+    libro,
+    'Empresas por cliente',
+    [
+      { titulo: 'Tipo de cliente (T6)', ancho: 28 },
+      { titulo: 'Empresas', ancho: 12 },
+    ],
+    (d.stats.empresas_por_cliente ?? []).map((s) => [nombreCliente(s.clientes as TipoCliente), s.total]),
+  )
+
+  agregarTabla(
+    libro,
+    'Respuestas por etapa',
+    [
+      { titulo: 'Etapa', ancho: 60 },
+      { titulo: 'Respuestas', ancho: 14 },
+    ],
+    (d.stats.respuestas_por_etapa ?? []).map((s) => [etiquetaEtapa(etapaDesdeApi(s.etapa)), s.total]),
+  )
+
+  // Tabla cruzada materia × etapa (la misma de la gráfica «Etapas»).
+  const materiasEtapas = [...new Set((d.stats.etapas_por_materia ?? []).map((x) => `${x.numero}. ${x.materia}`))].sort()
+  agregarTabla(
+    libro,
+    'Etapas por materia',
+    [
+      { titulo: 'Materia', ancho: 36 },
+      ...ORDEN_ETAPA.map((e) => ({ titulo: nombreEtapa(e), ancho: 14 })),
+      { titulo: 'Total', ancho: 10 },
+    ],
+    materiasEtapas.map((m) => {
+      const fila = ORDEN_ETAPA.map((e) => (d.stats.etapas_por_materia ?? [])
+        .find((x) => `${x.numero}. ${x.materia}` === m && x.etapa === e)?.total ?? 0)
+      return [m, ...fila, fila.reduce((a, b) => a + b, 0)]
+    }),
+  )
+
+  agregarTabla(
+    libro,
+    'Prácticas y retos',
+    [
+      { titulo: 'Materia', ancho: 36 },
+      { titulo: 'Prácticas registradas', ancho: 16 },
+      { titulo: 'Elegida como reto (empresas)', ancho: 18 },
+    ],
+    (d.stats.practicas_por_materia ?? []).map((x) => [
+      `${x.numero}. ${x.materia}`, x.total,
+      (d.stats.retos_por_materia ?? []).find((r) => r.numero === x.numero)?.total ?? 0,
+    ]),
+  )
+
+  const al = d.stats.alertas
+  agregarTabla(
+    libro,
+    'Alertas',
+    [
+      { titulo: 'Alerta informativa', ancho: 62 },
+      { titulo: 'Empresas', ancho: 12 },
+    ],
+    al ? [
+      ['Seguridad y salud en el trabajo (03b en etapa inicial o N/A)', al.sst],
+      ['Datos personales de clientes (06b en etapa inicial o N/A)', al.datos],
+      ['Ley 2173: empresa mediana o que no conoce su tamaño', al.ley2173],
+      ['Operación cerca de comunidades indígenas o afrodescendientes', al.territorio],
+    ] : [],
+  )
+
+  const ind = d.stats.indicadores
+  agregarTabla(
+    libro,
+    'Indicadores',
+    [
+      { titulo: 'Indicador (sección 10 del protocolo)', ancho: 60 },
+      { titulo: 'Valor', ancho: 12 },
+    ],
+    ind ? [
+      ['Empresas con tamizaje', ind.empresas_con_tamizaje],
+      ['Empresas en el perfil del piloto (10–50 personas)', ind.empresas_perfil_piloto],
+      ['Empresas con autodiagnóstico iniciado', ind.empresas_con_diagnostico],
+      ['Empresas con al menos una práctica registrada', ind.empresas_con_practicas],
+      ['Prácticas existentes registradas', ind.practicas_registradas],
+      ['Respuestas «Hacemos algo diferente»', ind.respuestas_diferente],
+      ['… de ellas sin clasificar por NEXUS', ind.diferente_sin_clasificar],
+      ['Respuestas «No aplica»', ind.respuestas_na],
+      ['Respuestas a «¿Qué le gustaría fortalecer?»', ind.materias_con_fortalecer],
+      ['Respuestas a la pregunta final', ind.comentarios_finales],
+    ] : [],
   )
 
   agregarTabla(
@@ -235,7 +329,7 @@ export async function construirLibro(d: DatosReporte): Promise<ExcelJS.Workbook>
 
   agregarTabla(
     libro,
-    'Madurez por dimensión',
+    'Etapa promedio por materia',
     [
       { titulo: 'Formato', ancho: 18 },
       { titulo: 'N.º', ancho: 8 },
@@ -260,20 +354,25 @@ export async function construirLibro(d: DatosReporte): Promise<ExcelJS.Workbook>
       { titulo: 'Departamento', ancho: 22 },
       { titulo: 'Año', ancho: 8 },
       { titulo: 'Tamaño', ancho: 16 },
-      { titulo: 'Empleados', ancho: 12 },
-      { titulo: 'Áreas de vida', ancho: 18 },
-      { titulo: 'Ciclo previo', ancho: 13 },
-      { titulo: 'Comunidades étnicas', ancho: 20 },
-      { titulo: 'Consumidor final', ancho: 17 },
-      { titulo: 'ISO 26000', ancho: 16 },
-      { titulo: 'Ley 2173', ancho: 16 },
+      { titulo: 'Personas', ancho: 10 },
+      { titulo: 'Vinculación', ancho: 24 },
+      { titulo: 'Territorio', ancho: 28 },
+      { titulo: 'Clientes', ancho: 18 },
+      { titulo: 'Perfil piloto (10–50)', ancho: 14 },
+      { titulo: 'Autodiagnóstico', ancho: 14 },
+      { titulo: 'Respuestas con etapa', ancho: 12 },
+      { titulo: 'Prácticas registradas', ancho: 12 },
+      { titulo: 'Por clasificar', ancho: 11 },
       { titulo: 'Registro', ancho: 22 },
     ],
     d.empresas.map((e) => [
       e.razon_social, e.nit, e.dv, e.sector_nombre ?? e.sector_id, e.municipio,
-      e.departamento ?? '—', e.anio ?? '—', e.tamano ?? '—', e.empleados ?? '—',
-      e.areas_de_vida ?? '—', siNo(e.ciclo_previo), siNo(e.comunidades_etnicas),
-      siNo(e.consumidor_final), e.iso26000_estado ?? '—', e.ley2173_estado ?? '—',
+      e.departamento ?? '—', e.anio ?? '—', nombreTamano(e.tamano as Tamano), e.personas ?? '—',
+      e.vinculacion ? nombresVinculacion(e.vinculacion) : '—',
+      [e.zonas ? nombresZonas(e.zonas) : '', e.territorio ?? ''].filter((x) => x && x !== '—').join(' · ') || '—',
+      e.clientes ? nombreCliente(e.clientes as TipoCliente) : '—',
+      siNo(e.perfil_piloto), e.diagnostico_estado ?? '—', e.respuestas_con_etapa,
+      e.practicas_registradas, e.pendientes_clasificar,
       new Date(e.creado_en).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }),
     ]),
   )

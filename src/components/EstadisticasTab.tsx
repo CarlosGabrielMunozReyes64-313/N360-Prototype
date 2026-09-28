@@ -24,8 +24,10 @@ function TarjetaResumen({ etiqueta, valor }: { etiqueta: string; valor: number |
 function descargarCSV(filas: EmpresaDetalle[]) {
   const encabezados = [
     'razon_social', 'nit', 'dv', 'sector', 'municipio', 'departamento',
-    'anio', 'tamano', 'empleados', 'areas_de_vida', 'ciclo_previo',
-    'comunidades_etnicas', 'consumidor_final', 'iso26000_estado', 'ley2173_estado', 'creado_en',
+    'anio', 'tamano', 'ingresos_rango', 'personas', 'vinculacion', 'vinculacion_detalle',
+    'zonas', 'territorio', 'clientes', 'clientes_detalle', 'perfil_piloto',
+    'diagnostico_estado', 'respuestas_con_etapa', 'practicas_registradas', 'pendientes_clasificar',
+    'creado_en',
   ]
   const escapar = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v)
@@ -35,8 +37,11 @@ function descargarCSV(filas: EmpresaDetalle[]) {
     encabezados.join(','),
     ...filas.map((f) => [
       f.razon_social, f.nit, f.dv, f.sector_nombre ?? f.sector_id, f.municipio, f.departamento,
-      f.anio, f.tamano, f.empleados, f.areas_de_vida, f.ciclo_previo,
-      f.comunidades_etnicas, f.consumidor_final, f.iso26000_estado, f.ley2173_estado, f.creado_en,
+      f.anio, f.tamano, f.ingresos_rango, f.personas, (f.vinculacion ?? []).join(' | '), f.vinculacion_detalle,
+      (f.zonas ?? []).join(' | '), f.territorio, f.clientes, f.clientes_detalle,
+      f.perfil_piloto === null ? '' : f.perfil_piloto ? 'si' : 'no',
+      f.diagnostico_estado, f.respuestas_con_etapa, f.practicas_registradas, f.pendientes_clasificar,
+      f.creado_en,
     ].map(escapar).join(',')),
   ]
   // BOM UTF-8 para que Excel abra bien las tildes/ñ.
@@ -142,6 +147,38 @@ export function EstadisticasTab({ token }: { token: string }) {
         <TarjetaResumen etiqueta="Diagnósticos completados" valor={stats.resumen.diagnosticos_completados} />
         <TarjetaResumen etiqueta="Diagnósticos iniciados" valor={stats.resumen.diagnosticos_totales} />
       </section>
+
+      {stats.indicadores && (
+        <section className="card">
+          <div className="eyebrow">Indicadores del autodiagnóstico RSE Express</div>
+          <p className="lede">
+            Indicadores de la sección 10 del protocolo de validación. Son conteos descriptivos,
+            no metas. «Por clasificar» son respuestas «Hacemos algo diferente» que NEXUS aún no
+            ubica en una etapa (se clasifican desde la ficha de cada empresa).
+          </p>
+          <div className="resumen-grid" style={{ marginTop: 16 }}>
+            <TarjetaResumen etiqueta="Empresas con tamizaje" valor={stats.indicadores.empresas_con_tamizaje} />
+            <TarjetaResumen etiqueta="En perfil del piloto (10–50 personas)" valor={stats.indicadores.empresas_perfil_piloto} />
+            <TarjetaResumen etiqueta="Empresas con prácticas registradas" valor={stats.indicadores.empresas_con_practicas} />
+            <TarjetaResumen etiqueta="Prácticas existentes registradas" valor={stats.indicadores.practicas_registradas} />
+            <TarjetaResumen etiqueta="«Algo diferente» por clasificar" valor={stats.indicadores.diferente_sin_clasificar} />
+            <TarjetaResumen etiqueta="Respuestas «No aplica»" valor={stats.indicadores.respuestas_na} />
+          </div>
+          {stats.alertas && (
+            <>
+              <p className="lede" style={{ marginTop: 18 }}>
+                Empresas con alertas informativas (las mismas que cada empresa ve en su resultado):
+              </p>
+              <div className="resumen-grid" style={{ marginTop: 10 }}>
+                <TarjetaResumen etiqueta="SG-SST en etapa inicial" valor={stats.alertas.sst} />
+                <TarjetaResumen etiqueta="Datos personales en etapa inicial" valor={stats.alertas.datos} />
+                <TarjetaResumen etiqueta="Ley 2173 (tamaño)" valor={stats.alertas.ley2173} />
+                <TarjetaResumen etiqueta="Cerca de comunidades étnicas" valor={stats.alertas.territorio} />
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {hayDatos ? (
         <PanelGraficas

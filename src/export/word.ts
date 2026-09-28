@@ -1,3 +1,6 @@
+import { ORDEN_ETAPA, nombreEtapa } from '../engine/agregados'
+import type { Tamano, TipoCliente } from '../types'
+import { nombreCliente, nombreTamano } from '../data/tamizaje'
 import {
   AlignmentType, BorderStyle, Document, Footer, Header, HeadingLevel, ImageRun,
   PageNumber, PageOrientation, Packer, Paragraph, ShadingType, Table, TableCell,
@@ -236,6 +239,54 @@ export function construirDocumento(d: DatosInformeWord): Document {
     ))
   }
 
+  const ind = d.stats.indicadores
+  if (ind) {
+    cuerpo.push(titulo2('Indicadores del autodiagnóstico'))
+    cuerpo.push(tabla(
+      ['Indicador (sección 10 del protocolo)', 'Valor'],
+      [
+        ['Empresas con tamizaje', String(ind.empresas_con_tamizaje)],
+        ['Empresas en el perfil del piloto (10–50 personas)', String(ind.empresas_perfil_piloto)],
+        ['Empresas con autodiagnóstico iniciado', String(ind.empresas_con_diagnostico)],
+        ['Empresas con al menos una práctica registrada', String(ind.empresas_con_practicas)],
+        ['Prácticas existentes registradas', String(ind.practicas_registradas)],
+        ['Respuestas «Hacemos algo diferente» (sin clasificar)', `${ind.respuestas_diferente} (${ind.diferente_sin_clasificar})`],
+        ['Respuestas «No aplica»', String(ind.respuestas_na)],
+        ['Respuestas a «¿Qué le gustaría fortalecer?»', String(ind.materias_con_fortalecer)],
+      ],
+      { anchos: [80, 20], numericaFinal: true },
+    ))
+  }
+
+  const etapas = d.stats.etapas_por_materia ?? []
+  if (etapas.length) {
+    cuerpo.push(titulo2('Etapas por materia'))
+    const materias = [...new Set(etapas.map((x) => `${x.numero}. ${x.materia}`))].sort()
+    cuerpo.push(tabla(
+      ['Materia', ...ORDEN_ETAPA.map((e) => nombreEtapa(e)), 'Total'],
+      materias.map((m) => {
+        const fila = ORDEN_ETAPA.map((e) => etapas.find((x) => `${x.numero}. ${x.materia}` === m && x.etapa === e)?.total ?? 0)
+        return [m, ...fila.map(String), String(fila.reduce((a, b) => a + b, 0))]
+      }),
+      { anchos: [24, 10, 10, 10, 10, 10, 10, 8, 8], numericaFinal: true },
+    ))
+  }
+
+  const al = d.stats.alertas
+  if (al) {
+    cuerpo.push(titulo2('Alertas informativas'))
+    cuerpo.push(tabla(
+      ['Alerta', 'Empresas'],
+      [
+        ['Seguridad y salud en el trabajo en etapa inicial', String(al.sst)],
+        ['Datos personales de clientes en etapa inicial', String(al.datos)],
+        ['Ley 2173 (mediana o tamaño desconocido)', String(al.ley2173)],
+        ['Cerca de comunidades étnicas', String(al.territorio)],
+      ],
+      { anchos: [80, 20], numericaFinal: true },
+    ))
+  }
+
   cuerpo.push(titulo2('Diagnósticos por estado'))
   if (s.diagnosticos_por_estado.length === 0) {
     cuerpo.push(vacio('Todavía no hay diagnósticos iniciados.'))
@@ -251,7 +302,7 @@ export function construirDocumento(d: DatosInformeWord): Document {
     ))
   }
 
-  cuerpo.push(titulo2('Madurez promedio por dimensión'))
+  cuerpo.push(titulo2('Etapa promedio por materia (lectura interna 0–4)'))
   cuerpo.push(parrafo(
     'Escala 0–4: 0 sin gestión, 1 informal, 2 planificado, 3 implementado y medido, 4 mejora continua.',
     { apagado: true },
@@ -292,7 +343,7 @@ export function construirDocumento(d: DatosInformeWord): Document {
           transformation: { width: anchoDestino, height: altoDestino },
           altText: {
             name: 'Gráfica general',
-            description: 'Todas las distribuciones del panel en barras horizontales: conteos y madurez promedio por dimensión',
+            description: 'Todas las distribuciones del panel en barras horizontales: conteos y etapa promedio por materia',
             title: 'Estadísticas generales',
           },
         }),
@@ -307,18 +358,18 @@ export function construirDocumento(d: DatosInformeWord): Document {
     anexo.push(vacio('No hay empresas registradas.'))
   } else {
     anexo.push(tabla(
-      ['Razón social', 'NIT', 'Sector', 'Municipio', 'Año', 'Tamaño', 'Empleados', 'ISO 26000', 'Ley 2173', 'Étnicas'],
+      ['Razón social', 'NIT', 'Sector', 'Municipio', 'Tamaño', 'Personas', 'Clientes', 'Autodiag.', 'Prácticas', 'Piloto'],
       d.empresas.map((e) => [
         e.razon_social,
         `${e.nit}-${e.dv}`,
         e.sector_nombre ?? e.sector_id,
         e.municipio,
-        e.anio !== null ? String(e.anio) : '—',
-        e.tamano ?? '—',
-        e.empleados !== null ? String(e.empleados) : '—',
-        e.iso26000_estado ?? '—',
-        e.ley2173_estado ?? '—',
-        siNo(e.comunidades_etnicas),
+        nombreTamano(e.tamano as Tamano),
+        e.personas !== null ? String(e.personas) : '—',
+        e.clientes ? nombreCliente(e.clientes as TipoCliente) : '—',
+        e.diagnostico_estado ?? '—',
+        String(e.practicas_registradas),
+        siNo(e.perfil_piloto),
       ]),
       { anchos: [20, 10, 16, 11, 5, 9, 8, 8, 8, 5], numericaFinal: false },
     ))

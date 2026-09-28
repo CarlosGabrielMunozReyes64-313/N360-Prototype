@@ -100,6 +100,14 @@ export function IconoPastel(p: Props) {
   )
 }
 
+export function IconoEtapas(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M3 6h5M8 6h6M14 6h7M3 12h9M12 12h4M16 12h5M3 18h3M6 18h10M16 18h5" strokeWidth={3} />
+    </Svg>
+  )
+}
+
 export function IconoCampana(p: Props) {
   return (
     <Svg {...p}>

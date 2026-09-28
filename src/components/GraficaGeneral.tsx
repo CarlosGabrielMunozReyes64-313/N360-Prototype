@@ -101,7 +101,7 @@ function agrupar(barras: Barra[]) {
     }
     g.barras.push(b)
   }
-  for (const g of grupos) g.detalle = `${g.barras.length} ${g.barras.length === 1 ? 'dimensión' : 'dimensiones'}`
+  for (const g of grupos) g.detalle = `${g.barras.length} ${g.barras.length === 1 ? 'materia' : 'materias'}`
   return grupos
 }
 
@@ -116,7 +116,7 @@ function maquetarPanel(
   const xBarra = apilado ? 0 : colEtiqueta + 14
   const anchoBarra = Math.max(60, ancho - xBarra - reserva)
 
-  const titulo = madurez ? 'Madurez promedio por dimensión' : 'Conteos'
+  const titulo = madurez ? 'Etapa promedio por materia (lectura interna)' : 'Conteos'
   const subtitulo = madurez
     ? 'Escala de 0 a 4. El color y la palabra al final de cada barra indican el nivel.'
     : 'Cuántos registros hay en cada categoría.'
@@ -316,7 +316,7 @@ function DibujoPanel({ p }: { p: Panel }) {
         x={p.xBarra + p.anchoBarra / 2} y={p.yEje + 38} textAnchor="middle"
         fontFamily={FUENTE} fontSize={F_NOTA} fill={APAGADO}
       >
-        {madurez ? 'Nivel de madurez promedio (0 a 4)' : 'Cantidad'}
+        {madurez ? 'Etapa promedio (lectura interna, 0 a 4)' : 'Cantidad'}
       </text>
     </g>
   )
@@ -347,8 +347,8 @@ export function GraficaGeneral({ secciones, ancho, conEncabezado = false, fecha 
     >
       <title id={idTitulo}>Estadísticas generales de NEXUS 360° en barras horizontales</title>
       <desc id={idDesc}>
-        {`${conteos} barras de conteo y ${promedios} promedios de madurez en escala de 0 a 4. `}
-        El valor exacto está escrito al final de cada barra; en madurez también el nivel.
+        {`${conteos} barras de conteo y ${promedios} promedios de etapa en escala de 0 a 4. `}
+        El valor exacto está escrito al final de cada barra; en los promedios también la etapa.
       </desc>
       <rect x={0} y={0} width={W} height={H} fill="#ffffff" />
 
@@ -369,7 +369,7 @@ export function GraficaGeneral({ secciones, ancho, conEncabezado = false, fecha 
 
       {conEncabezado && (
         <text x={PAD_X} y={H - 14} fontFamily={FUENTE} fontSize={F_NOTA} fill={APAGADO}>
-          Conteos y madurez usan escalas distintas: cada panel se lee contra su propio eje.
+          Conteos y promedios de etapa usan escalas distintas: cada panel se lee contra su propio eje.
         </text>
       )}
     </svg>

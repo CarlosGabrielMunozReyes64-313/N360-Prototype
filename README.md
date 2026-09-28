@@ -1,8 +1,12 @@
-# NEXUS 360° — Prototipo de diagnóstico normativo
+# NEXUS 360° — Autodiagnóstico RSE Express
 
-Front-end del flujo de diagnóstico: perfil de empresa → tamizaje anual →
-formatos → resultados cruzados → informe en PDF. El acceso con cuenta va
-antes y se integra aparte.
+Front-end del flujo: perfil de empresa → tamizaje «Conozcamos su empresa» →
+Autodiagnóstico RSE Express (7 materias de la ISO 26000, 21 preguntas
+abiertas) → mapa de prácticas y matriz de priorización → informe en PDF.
+
+El instrumento es el Anexo 1 del *Protocolo de Validación NEXUS RSE Express +
+RSE por Retos* (v2, septiembre de 2026). Reemplaza a los formatos anteriores
+(Formato 01 ISO 26000 de 21 preguntas y Formato 02 Ley 2173 de 26 preguntas).
 
 ## Correr
 
@@ -10,25 +14,79 @@ antes y se integra aparte.
 npm install
 npm run dev      # desarrollo
 npm run build    # compila TypeScript y empaqueta
-npm run test     # pruebas del motor de cálculo (requiere red la primera vez)
+npm run test     # pruebas (motor, almacenamiento, API, gráficas, exportaciones)
+npx vite-node pruebas/pdf.ts   # genera un informe de ejemplo en /tmp/informe.pdf
 ```
 
 ## Estructura
 
 ```
 src/
-  types.ts                 modelo de dominio
-  data/escala.ts           escala 0–4, anclas por arquetipo, verbos
-  data/formato01.ts        ISO 26000 · 21 preguntas · pesos por sector
-  data/formato02.ts        Ley 2173 · 26 preguntas · reglas de bandera roja
-  engine/scoring.ts        pesos, N/A, cobertura, banderas, lectura cruzada, plan
-  export/pdf.ts            informe en PDF vectorial
-  components/              pantallas y el control de escala
-  components/MenuCuenta    menú de la foto de perfil (Configuración, Cerrar sesión)
-  components/FotoPerfil    foto en «Mi cuenta» + EditorFoto (encuadre, zoom, giro)
-  perfil/                  foto predeterminada, recorte y caché de fotos
-pruebas/motor.ts           53 aserciones sobre la aritmética del motor
+  types.ts                 modelo de dominio (etapas, respuestas abiertas, matriz)
+  data/rseExpress.ts       catálogo del Anexo 1 (GENERADO; mismo contenido que
+                           db/009_rse_express.sql en el backend)
+  data/tamizaje.ts         T1, T2, T5 y T6 del tamizaje, opciones y validación
+  data/escala.ts           «¿En qué punto está?» (sección 6.3), bandas y verbos
+  engine/scoring.ts        lectura interna 0–4, mapa de prácticas, oportunidades,
+                           matriz de priorización y alertas informativas
+  almacen.ts               copia local (localStorage v2) y migración de datos viejos
+  auth/empresaApi.ts       /empresa/mio y /empresa/mio/diagnosticos/rse_express/…
+  export/pdf.ts            informe para la empresa (mapa + matriz + alertas)
+  components/TamizajePaso  tamizaje nuevo
+  components/MenuFormatos  portada del autodiagnóstico con avance por materia
+  components/Cuestionario  preguntas abiertas, ejemplos, «algo diferente», etapa
+  components/Resultados    mapa de prácticas, fortalezas, matriz de priorización
+  components/EmpresasTab   ficha de empresa del admin: respuestas y clasificación
+pruebas/                   vitest (+ fast-check para las propiedades del motor)
 ```
+
+## Cómo responde la empresa
+
+Por cada pregunta (sección 6.3 del protocolo): una respuesta abierta, ejemplos
+orientadores opcionales, «Hacemos algo diferente: ___» y «¿En qué punto
+está?». Al final de cada materia, «¿Qué le gustaría fortalecer o empezar a
+hacer en este tema?», y al final de todo una pregunta abierta. Una pregunta
+queda completa con la etapa y algo de lo que hacen (texto, ejemplo u «otro»),
+salvo que la etapa sea «Aún no lo hemos abordado» o «No aplica».
+
+## Reglas que el motor implementa
+
+- **A la empresa no se le muestra un puntaje.** Se le entrega un mapa de
+  prácticas, fortalezas (etapas 3–4), prácticas en desarrollo (2) y
+  oportunidades (0–1). La lectura 0–4 es interna (radar sin números, panel admin).
+- **«No aplica» no es cero.** Sale del cálculo y su peso se redistribuye.
+- **«Hacemos algo diferente» espera a NEXUS.** Queda fuera del cálculo hasta que
+  un admin la clasifica (0–4) desde la ficha de la empresa.
+- **Consumidores es condicional.** Si T6 es «otras empresas» o «entidades
+  públicas», la materia no se pregunta ni cuenta.
+- **Tríada interna por materia** (A 0.30, D 0.35, E 0.35) y pesos por sector
+  (`PESOS_SECTOR`, juicio de materialidad pendiente de verificación). Σ = 1.0
+  con tolerancia `1e-4`. No se trasladan a la matriz de priorización.
+- **Matriz de priorización (sección 7).** 3 a 5 oportunidades, máximo una por
+  materia; primero los temas con implicación legal en etapa inicial (03b SST,
+  06b datos), luego la brecha ponderada. Verbo según la etapa: Empezar (0),
+  Formalizar (1), Fortalecer (2), Ampliar (3). Cuatro criterios de 1 a 3
+  (importancia, viabilidad, potencial, interés) y prioridad = suma (4–12). El
+  interés se sugiere en 3 donde la empresa escribió qué quiere fortalecer.
+- **Alertas informativas, no sanciones:** Ley 2173 si el tamaño es mediana o
+  «no estoy seguro»; SG-SST si 03b está en 0–1 o N/A; Ley 1581 si 06b está en
+  0–1 o N/A; comunidades étnicas si T5 las marca.
+
+## Cuentas que venían del instrumento anterior
+
+La migración `db/009_rse_express.sql` del backend conserva usuarios y empresas
+(NIT, razón social, sector, ubicación) y retira tamizajes y diagnósticos
+viejos (quedan respaldados en el esquema `nexus360_respaldo`). Al entrar, el
+front recibe la empresa con `tamizaje: null`, muestra un aviso y pide el
+tamizaje nuevo con el perfil ya lleno. En el navegador pasa lo mismo:
+`almacen.ts` migra los datos locales de la versión anterior conservando el
+perfil y descartando el tamizaje; el historial conserva fecha y perfil.
+
+## Pendiente de validación
+
+Las alternativas sugeridas para cada oportunidad y los rangos de ingresos de
+T1 son propuestas para validar con el equipo NEXUS y con las empresas del
+piloto. Los pesos sectoriales siguen siendo un juicio de materialidad.
 
 ## Cuenta y foto de perfil
 
@@ -53,37 +111,18 @@ una vez) e **Historial de cambios**.
 
 Requiere el backend con la migración `008_foto_perfil.sql` aplicada.
 
-## Reglas que el motor implementa
-
-- **Σ peso = 1.0 en cada nivel.** Se valida con tolerancia (`1e-4`), no con
-  igualdad exacta: siete materias iguales dan 0.142857… y una comparación
-  estricta rechazaría un formato correcto.
-- **«No aplica» no es cero.** Sale del denominador y su peso se redistribuye
-  entre las preguntas restantes de la sección. Un cero real sí baja el puntaje.
-- **Guarda de cobertura.** Si más de la mitad del peso queda en N/A, no se
-  reporta puntaje: el diagnóstico se declara no concluyente.
-- **Techo de primer ciclo.** El nivel 4 exige mejora continua entre ciclos. Sin
-  ciclos previos el techo del Formato 02 es 3.0 y se reporta sobre esa base.
-- **El tamizaje apaga dimensiones.** Sin Áreas de Vida publicadas en el
-  municipio, el Formato 02 pasa de 26 preguntas a 8 y la obligación se marca
-  como no exigible, no como incumplida.
-- **Los dos formatos no se promedian.** Se contrastan: la Ley 2173 se verifica
-  contra documentos y funciona como control de realidad sobre la autoevaluación
-  de la ISO.
-- **Prioridad por brecha ponderada**, `peso × (techo − valor)`, no por puntaje
-  bruto. Las banderas rojas y las brechas legales exigibles van primero.
-- **El verbo de la recomendación sale del arquetipo** de la pregunta: radicar,
-  formular, ejecutar y registrar, calcular y certificar, formalizar.
-
-## Pendiente de validación normativa
-
-Antes de publicar el Formato 02 hay que contrastar contra el articulado:
-criterios de exclusión en el conteo de empleados, plazo vigente de delimitación
-tras la Resolución 0358 de 2026, régimen sancionatorio y modalidad de asocio.
-Los pesos sectoriales de `PESOS_SECTOR` son un juicio de materialidad, no una
-lectura de la norma, y deben poder editarse desde administración.
-
 ## Estadísticas del panel de admin (gráficas)
+
+Vistas: **Barras** (todo el tablero), **Pastel** (repartos de un total),
+**Etapas** (una barra apilada al 100 % por materia con el reparto de
+respuestas según «¿En qué punto está?»; nueva con el RSE Express) y
+**Campana** (distribución de la etapa promedio por materia). Secciones del
+RSE Express: empresas por número de personas y por tipo de cliente,
+respuestas por etapa, prácticas registradas por materia, oportunidades
+elegidas como reto, alertas informativas y etapa promedio (lectura
+interna). Todo va también al PDF, al Excel (hojas «Etapas por materia»,
+«Prácticas y retos», «Alertas» e «Indicadores») y al Word. Si el backend
+todavía no manda las estadísticas nuevas, el panel las omite sin romperse.
 
 La pestaña «Estadísticas generales» tiene tres gráficas de los mismos datos,
 en pestañas: **Barras** (horizontales, conteos y madurez en paneles con su

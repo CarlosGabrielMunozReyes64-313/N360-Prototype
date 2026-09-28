@@ -4,8 +4,15 @@ import type { EmpresaDetalle, Estadisticas } from '../src/auth/adminApi'
 import {
   aplanar, construirSecciones, maximoConteo, seccionesConDatos, ticksBonitos, totalBarras,
 } from '../src/engine/agregados'
+import { filasEtapas, seccionesPastel } from '../src/engine/vistasGraficas'
 import { construirLibro } from '../src/export/excel'
 import { construirDocumento } from '../src/export/word'
+
+const INDICADORES = {
+  empresas_con_tamizaje: 12, empresas_perfil_piloto: 7, empresas_con_diagnostico: 10, empresas_con_practicas: 9,
+  practicas_registradas: 140, respuestas_diferente: 3, diferente_sin_clasificar: 1, respuestas_na: 4,
+  materias_con_fortalecer: 25, comentarios_finales: 6,
+}
 
 const STATS: Estadisticas = {
   resumen: {
@@ -16,28 +23,52 @@ const STATS: Estadisticas = {
     { sector_id: 'C', nombre: 'Industrias manufactureras', total: 5 },
   ],
   empresas_por_tamano: [
-    { tamano: 'Microempresa', total: 8 },
-    { tamano: 'Pequeña', total: 4 },
+    { tamano: 'micro', total: 8 },
+    { tamano: 'pequena', total: 4 },
+  ],
+  empresas_por_cliente: [
+    { clientes: 'personas', total: 7 },
+    { clientes: 'mezcla', total: 5 },
   ],
   diagnosticos_por_estado: [
-    { formato_id: 'iso26000', estado: 'completado', total: 6 },
-    { formato_id: 'iso26000', estado: 'borrador', total: 9 },
-    { formato_id: 'ley2173', estado: 'completado', total: 3 },
-    { formato_id: 'ley2173', estado: 'archivado', total: 3 },
+    { formato_id: 'rse_express', estado: 'completado', total: 9 },
+    { formato_id: 'rse_express', estado: 'borrador', total: 12 },
+  ],
+  respuestas_por_etapa: [
+    { etapa: 'NA', total: 4 },
+    { etapa: '2', total: 31 },
+    { etapa: '0', total: 20 },
+    { etapa: 'diferente', total: 3 },
   ],
   promedio_por_dimension: [
-    { formato_id: 'iso26000', numero: '1', dimension: 'Gobernanza de la organización', promedio: 2.75, respuestas: 40 },
-    { formato_id: 'iso26000', numero: '2', dimension: 'Derechos humanos', promedio: 1.2, respuestas: 36 },
-    { formato_id: 'ley2173', numero: '1', dimension: 'Huella de carbono', promedio: 3.6, respuestas: 12 },
+    { formato_id: 'rse_express', numero: '01', dimension: 'Gobernanza organizacional', promedio: 2.75, respuestas: 40 },
+    { formato_id: 'rse_express', numero: '02', dimension: 'Derechos humanos', promedio: 1.2, respuestas: 36 },
+    { formato_id: 'rse_express', numero: '04', dimension: 'Medio ambiente', promedio: 3.6, respuestas: 12 },
   ],
+  indicadores: INDICADORES,
+  empresas_por_personas: [{ rango: '1-9', total: 5 }, { rango: '10-50', total: 7 }],
+  etapas_por_materia: [
+    { numero: '01', materia: 'Gobernanza organizacional', etapa: '1', total: 6 },
+    { numero: '01', materia: 'Gobernanza organizacional', etapa: '3', total: 2 },
+    { numero: '04', materia: 'Medio ambiente', etapa: '0', total: 3 },
+  ],
+  practicas_por_materia: [
+    { numero: '01', materia: 'Gobernanza organizacional', total: 14 },
+    { numero: '04', materia: 'Medio ambiente', total: 0 },
+  ],
+  retos_por_materia: [{ numero: '04', materia: 'Medio ambiente', total: 3 }],
+  alertas: { ley2173: 2, sst: 4, datos: 0, territorio: 1 },
 }
 
 const VACIAS: Estadisticas = {
   resumen: { empresas: 0, usuarios: 2, diagnosticos_totales: 0, diagnosticos_completados: 0 },
   empresas_por_sector: [],
   empresas_por_tamano: [],
+  empresas_por_cliente: [],
   diagnosticos_por_estado: [],
+  respuestas_por_etapa: [],
   promedio_por_dimension: [],
+  indicadores: { ...INDICADORES, empresas_con_tamizaje: 0, practicas_registradas: 0 },
 }
 
 const EMPRESAS: EmpresaDetalle[] = [
@@ -45,26 +76,58 @@ const EMPRESAS: EmpresaDetalle[] = [
     empresa_id: 'e1', razon_social: 'Café del Sur S.A.S.', nit: '900123456', dv: '7',
     sector_id: 'C', sector_nombre: 'Industrias manufactureras', municipio: 'La Unión',
     departamento: 'Nariño', creado_en: '2026-03-01T14:00:00Z', anio: 2026,
-    tamano: 'Microempresa', empleados: 8, areas_de_vida: 'Ambiental',
-    ciclo_previo: false, comunidades_etnicas: null, consumidor_final: true,
-    iso26000_estado: 'completado', ley2173_estado: null,
+    tamano: 'micro', ingresos_rango: null, personas: 8, vinculacion: ['laboral', 'socios'],
+    vinculacion_detalle: null, zonas: ['rural'], territorio: 'Vereda La Palma', clientes: 'personas',
+    clientes_detalle: null, perfil_piloto: false, diagnostico_estado: 'completado',
+    diagnostico_actualizado_en: '2026-09-01T10:00:00Z', respuestas_con_etapa: 21,
+    practicas_registradas: 15, pendientes_clasificar: 0,
   },
 ]
 
 describe('agregados', () => {
-  it('consolida las cinco secciones del panel', () => {
+  it('consolida las secciones del panel, incluidas las del RSE Express', () => {
     const secciones = construirSecciones(STATS)
     expect(secciones.map((s) => s.id)).toEqual([
-      'resumen', 'sector', 'tamano', 'estado', 'madurez',
+      'resumen', 'sector', 'tamano', 'personas', 'clientes', 'estado', 'etapas',
+      'practicas', 'retos', 'alertas', 'madurez', 'etapas_materia',
     ])
-    // 4 del resumen + 2 + 2 + 4 + 3
-    expect(totalBarras(secciones)).toBe(15)
+    // 4 del resumen + 2 + 2 + 2 + 2 + 2 + 4 + 2 + 1 + 3 alertas con valor + 3 + 3
+    expect(totalBarras(secciones)).toBe(30)
+    expect(secciones.find((s) => s.id === 'etapas_materia')!.escala).toBe('distribucion')
+  })
+
+  it('las alertas no van al pastel ni la tabla cruzada a las barras', () => {
+    const secciones = seccionesConDatos(construirSecciones(STATS))
+    expect(seccionesPastel(secciones).map((s) => s.id)).not.toContain('alertas')
+    expect(seccionesPastel(secciones).map((s) => s.id)).not.toContain('etapas_materia')
+    const filas = filasEtapas(secciones)
+    expect(filas.map((f) => [f.materia, f.total])).toEqual([['01. Gobernanza organizacional', 8], ['04. Medio ambiente', 3]])
+    expect(filas[0].segmentos.map((g) => g.porcentaje)).toEqual([75, 25])
+  })
+
+  it('funciona con un backend que todavía no manda las estadísticas nuevas', () => {
+    const viejo: Estadisticas = {
+      ...STATS, empresas_por_personas: undefined, etapas_por_materia: undefined,
+      practicas_por_materia: undefined, retos_por_materia: undefined, alertas: undefined,
+    }
+    const ids = seccionesConDatos(construirSecciones(viejo)).map((s) => s.id)
+    expect(ids).not.toContain('etapas_materia')
+    expect(ids).toContain('madurez')
+  })
+
+  it('nombra tamaños, clientes y etapas en lenguaje de la empresa, en orden de etapa', () => {
+    const secciones = construirSecciones(STATS)
+    const de = (id: string) => secciones.find((s) => s.id === id)!.barras.map((b) => b.etiqueta)
+    expect(de('tamano')).toEqual(['Micro', 'Pequeña'])
+    expect(de('clientes')).toEqual(['Personas u hogares', 'Una mezcla'])
+    expect(de('etapas')).toEqual(['Aún no abordado', 'Organizado', 'Algo diferente', 'No aplica'])
+    expect(secciones.find((s) => s.id === 'madurez')!.barras[0].grupo).toBe('RSE Express')
   })
 
   it('el eje de conteo ignora los promedios de madurez', () => {
-    // 21 diagnósticos iniciados es el conteo más alto; 3,6 de madurez no
-    // debe influir en el techo del eje izquierdo.
-    expect(maximoConteo(construirSecciones(STATS))).toBe(21)
+    // 31 respuestas en «organizado» es el conteo más alto; 3,6 de etapa
+    // promedio no debe influir en el techo del eje izquierdo.
+    expect(maximoConteo(construirSecciones(STATS))).toBe(31)
   })
 
   it('descarta las secciones sin datos para no dibujar huecos', () => {
@@ -76,7 +139,8 @@ describe('agregados', () => {
     const secciones = construirSecciones(STATS)
     const filas = aplanar(secciones)
     expect(filas).toHaveLength(totalBarras(secciones))
-    expect(filas.at(-1)).toMatchObject({ unidad: 'escala 0–4', nota: '12 resp.' })
+    expect(filas.at(-1)).toMatchObject({ seccion: 'Etapas por materia', unidad: 'respuestas', valor: 3 })
+    expect(filas.find((f) => f.nota === '12 resp.')).toMatchObject({ unidad: 'escala 0–4' })
   })
 })
 
@@ -109,7 +173,9 @@ describe('exportación a Excel', () => {
     })
     expect(libro.worksheets.map((h) => h.name)).toEqual([
       'Resumen', 'Gráfica (datos)', 'Empresas por sector', 'Empresas por tamaño',
-      'Diagnósticos por estado', 'Madurez por dimensión', 'Detalle de empresas',
+      'Empresas por cliente', 'Respuestas por etapa', 'Etapas por materia', 'Prácticas y retos',
+      'Alertas', 'Indicadores',
+      'Diagnósticos por estado', 'Etapa promedio por materia', 'Detalle de empresas',
     ])
 
     const hojaSector = libro.getWorksheet('Empresas por sector')!

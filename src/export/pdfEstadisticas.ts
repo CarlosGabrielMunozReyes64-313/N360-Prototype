@@ -310,6 +310,16 @@ export function lecturaRapida(stats: Estadisticas, secciones: Seccion[]): string
   const sector = [...stats.empresas_por_sector].sort((a, b) => b.total - a.total)[0]
   if (sector) frases.push(`El sector con más empresas es ${sector.nombre} (${numero(sector.total)}).`)
 
+  const ind = stats.indicadores
+  if (ind && ind.practicas_registradas > 0) {
+    frases.push(`Las empresas registraron ${numero(ind.practicas_registradas)} prácticas que ya realizan`
+      + (ind.diferente_sin_clasificar > 0 ? `; ${numero(ind.diferente_sin_clasificar)} prácticas propias esperan clasificación de NEXUS.` : '.'))
+  }
+  const reto = [...(stats.retos_por_materia ?? [])].sort((a, b) => b.total - a.total)[0]
+  if (reto) frases.push(`La materia más elegida para convertir en reto es ${reto.materia} (${numero(reto.total)} empresas).`)
+  const al = stats.alertas
+  if (al && al.sst > 0) frases.push(`${numero(al.sst)} empresas tienen la seguridad y salud en el trabajo en etapa inicial o marcada como «No aplica».`)
+
   for (const g of gruposCampana(secciones)) {
     if (!g.resumen) continue
     const orden = [...g.puntos].sort((a, b) => b.valor - a.valor)
@@ -317,8 +327,8 @@ export function lecturaRapida(stats: Estadisticas, secciones: Seccion[]): string
     const baja = orden[orden.length - 1]
     const nombre = (e: string) => (e.startsWith(`${g.nombre} · `) ? e.slice(g.nombre.length + 3) : e)
     frases.push(
-      `${g.nombre}: madurez media ${numero(g.resumen.media, 2)} (${nivelDe(g.resumen.media).etiqueta.toLowerCase()}). `
-      + `La dimensión más alta es ${nombre(alta.etiqueta)} (${numero(alta.valor, 2)}) `
+      `${g.nombre}: etapa media ${numero(g.resumen.media, 2)} (${nivelDe(g.resumen.media).etiqueta.toLowerCase()}). `
+      + `La materia más alta es ${nombre(alta.etiqueta)} (${numero(alta.valor, 2)}) `
       + `y la más baja, ${nombre(baja.etiqueta)} (${numero(baja.valor, 2)}).`,
     )
   }
@@ -328,11 +338,17 @@ export function lecturaRapida(stats: Estadisticas, secciones: Seccion[]): string
 function notasDe(vista: Vista, secciones: Seccion[]): string[] {
   if (vista === 'campana') {
     return [
-      ...gruposCampana(secciones).map((g) => `${g.nombre}: ${g.resumen ? describirResumen(g.resumen) : 'hacen falta al menos dos dimensiones para la curva'}.`),
-      'Media y desviación ponderadas por el número de respuestas de cada dimensión.',
+      ...gruposCampana(secciones).map((g) => `${g.nombre}: ${g.resumen ? describirResumen(g.resumen) : 'hacen falta al menos dos materias para la curva'}.`),
+      'Media y desviación ponderadas por el número de respuestas de cada materia.',
     ]
   }
-  if (vista === 'barras') return ['Conteos y madurez usan escalas distintas: cada panel se lee contra su propio eje.']
+  if (vista === 'barras') return ['Conteos y promedios de etapa usan escalas distintas: cada panel se lee contra su propio eje.']
+  if (vista === 'etapas') {
+    return [
+      'Cada barra reparte las respuestas de una materia entre las etapas de «¿En qué punto está?» y suma 100 %.',
+      '«Hacemos algo diferente» se muestra aparte hasta que NEXUS la clasifica; «No aplica» no cuenta como etapa 0.',
+    ]
+  }
   return ['Los porcentajes están redondeados de forma que cada pastel sume exactamente 100 %.']
 }
 

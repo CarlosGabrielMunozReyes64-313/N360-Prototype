@@ -6,6 +6,7 @@ import { construirSecciones, seccionesConDatos } from '../src/engine/agregados'
 import { GraficaGeneral } from '../src/components/GraficaGeneral'
 import { GraficaPastel } from '../src/components/GraficaPastel'
 import { GraficaCampana } from '../src/components/GraficaCampana'
+import { GraficaEtapas } from '../src/components/GraficaEtapas'
 import { PanelGraficas } from '../src/components/PanelGraficas'
 
 const STATS: Estadisticas = {
@@ -14,7 +15,9 @@ const STATS: Estadisticas = {
     { sector_id: 'I', nombre: 'Industrial', total: 1 },
     { sector_id: 'C', nombre: 'Comercio', total: 1 },
   ],
-  empresas_por_tamano: [{ tamano: 'grande', total: 1 }, { tamano: 'pequena', total: 1 }],
+  empresas_por_tamano: [{ tamano: 'mediana', total: 1 }, { tamano: 'pequena', total: 1 }],
+  empresas_por_cliente: [],
+  respuestas_por_etapa: [],
   diagnosticos_por_estado: [
     { formato_id: 'iso26000', estado: 'completado', total: 2 },
     { formato_id: 'ley2173', estado: 'completado', total: 2 },
@@ -42,13 +45,13 @@ describe('gráfica de barras horizontales', () => {
   it('escribe el nivel junto a cada promedio: el color no va solo', () => {
     const { container } = render(<GraficaGeneral secciones={secciones} ancho={1100} />)
     const barra = [...container.querySelectorAll('g')].find((g) => g.querySelector('title')?.textContent?.startsWith('ISO 26000 · 05.'))!
-    expect(textoDe(barra)).toMatch(/1,67\s*Informal/)
+    expect(textoDe(barra)).toMatch(/1,67\s*Organizado/)
   })
 
-  it('agrupa la madurez por formato y separa las escalas en dos paneles', () => {
+  it('agrupa la etapa promedio por formato y separa las escalas en dos paneles', () => {
     const { container } = render(<GraficaGeneral secciones={secciones} ancho={1100} />)
     const svg = textoDe(container)
-    for (const t of ['Conteos', 'Madurez promedio por dimensión', 'ISO 26000', 'Ley 2173', 'Nivel de madurez promedio (0 a 4)', 'Cantidad']) {
+    for (const t of ['Conteos', 'Etapa promedio por materia (lectura interna)', 'ISO 26000', 'Ley 2173', 'Etapa promedio (lectura interna, 0 a 4)', 'Cantidad']) {
       expect(svg).toContain(t)
     }
   })
@@ -94,7 +97,7 @@ describe('gráfica de campana', () => {
   it('explica por qué no dibuja curva si faltan datos', () => {
     const una = seccionesConDatos(construirSecciones({ ...STATS, promedio_por_dimension: STATS.promedio_por_dimension.slice(0, 1) }))
     const { container } = render(<GraficaCampana secciones={una} ancho={900} />)
-    expect(textoDe(container)).toMatch(/Hace falta al menos dos dimensiones/)
+    expect(textoDe(container)).toMatch(/Hace falta al menos dos materias/)
   })
 })
 
@@ -102,7 +105,7 @@ describe('panel de gráficas', () => {
   it('pestañas accesibles: flechas para cambiar de gráfica', async () => {
     render(<PanelGraficas secciones={secciones} generando={false} onDescargarPdf={() => {}} />)
     const tabs = screen.getAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Barras', 'Pastel', 'Campana'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Barras', 'Pastel', 'Etapas', 'Campana'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
 
     tabs[0].focus()
@@ -110,6 +113,10 @@ describe('panel de gráficas', () => {
     expect(screen.getByRole('tab', { name: 'Pastel' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Pastel' })).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Cómo se reparte cada total' })).toBeInTheDocument()
+
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'Etapas' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('heading', { name: 'En qué punto están las empresas en cada materia' })).toBeInTheDocument()
 
     await userEvent.keyboard('{End}')
     expect(screen.getByRole('tab', { name: 'Campana' })).toHaveAttribute('aria-selected', 'true')
@@ -132,5 +139,36 @@ describe('panel de gráficas', () => {
     const tabla = screen.getByRole('table', { name: 'Repartos' })
     expect(within(tabla).getAllByRole('row')).toHaveLength(1 + 6)
     expect(within(tabla).getAllByText('50 %')).toHaveLength(6)
+  })
+})
+
+describe('gráfica de etapas por materia', () => {
+  const conEtapas = seccionesConDatos(construirSecciones({
+    ...STATS,
+    etapas_por_materia: [
+      { numero: '01', materia: 'Gobernanza organizacional', etapa: '0', total: 2 },
+      { numero: '01', materia: 'Gobernanza organizacional', etapa: '2', total: 5 },
+      { numero: '01', materia: 'Gobernanza organizacional', etapa: 'NA', total: 1 },
+      { numero: '03', materia: 'Prácticas laborales', etapa: '3', total: 4 },
+      { numero: '03', materia: 'Prácticas laborales', etapa: 'diferente', total: 1 },
+    ],
+  }))
+
+  it('dibuja una barra por materia con porcentajes que suman 100 y su leyenda', () => {
+    const { container } = render(<GraficaEtapas secciones={conEtapas} ancho={1000} />)
+    const texto = textoDe(container)
+    expect(texto).toContain('01. Gobernanza organizacional')
+    expect(texto).toContain('8 resp.')
+    expect(texto).toContain('63 %')
+    for (const e of ['Aún no abordado', 'Organizado', 'Con resultados', 'Algo diferente', 'No aplica']) expect(texto).toContain(e)
+    const tramos = [...container.querySelectorAll('rect > title')].map((t) => t.textContent)
+    expect(tramos).toContain('03. Prácticas laborales · Con resultados: 4 (80 %)')
+  })
+
+  it('en pantallas angostas no se desborda y explica cuando no hay datos', () => {
+    const { container } = render(<GraficaEtapas secciones={conEtapas} ancho={360} />)
+    expect(container.querySelector('svg')!.getAttribute('width')).toBe('360')
+    const vacio = render(<GraficaEtapas secciones={secciones} ancho={800} />)
+    expect(textoDe(vacio.container)).toMatch(/Todavía no hay respuestas con etapa/)
   })
 })

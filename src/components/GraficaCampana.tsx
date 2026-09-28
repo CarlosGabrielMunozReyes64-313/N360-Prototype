@@ -63,7 +63,7 @@ export function GraficaCampana({ secciones, ancho, conEncabezado = false, fecha 
   const anchoUtil = W - 2 * PAD_X
   const leyenda: { c: (typeof curvas)[number]; detalle: string[]; y: number; enUnaLinea: boolean }[] = []
   for (const c of curvas) {
-    const texto = c.resumen ? describirResumen(c.resumen) : `${c.puntos.length} dimensión: hacen falta dos para la curva`
+    const texto = c.resumen ? describirResumen(c.resumen) : `${c.puntos.length} materia: hacen falta dos para la curva`
     const enUnaLinea = 52 + anchoTexto(`${c.nombre}   ${texto}`, F_TEXTO) <= anchoUtil
     const detalle = enUnaLinea ? [texto] : partirTexto(texto, anchoUtil - 50, F_TEXTO, 3)
     leyenda.push({ c, detalle, y: y + 16, enUnaLinea })
@@ -123,7 +123,7 @@ export function GraficaCampana({ secciones, ancho, conEncabezado = false, fecha 
   const H = Math.round(yPie + (nota.length ? nota.length * 17 + 16 : 4))
 
   const descripcion = curvas
-    .map((c) => `${c.nombre}: ${c.resumen ? describirResumen(c.resumen) : 'sin curva, faltan dimensiones'}`)
+    .map((c) => `${c.nombre}: ${c.resumen ? describirResumen(c.resumen) : 'sin curva, faltan materias'}`)
     .join('. ')
 
   return (
@@ -137,14 +137,14 @@ export function GraficaCampana({ secciones, ancho, conEncabezado = false, fecha 
       aria-labelledby={`${idTitulo} ${idDesc}`}
       style={{ display: 'block', fontFamily: FUENTE }}
     >
-      <title id={idTitulo}>Campana de distribución de la madurez por formato</title>
+      <title id={idTitulo}>Campana de distribución de la etapa promedio por materia</title>
       <desc id={idDesc}>{hayPuntos ? descripcion : 'Sin respuestas registradas todavía.'}</desc>
       <rect x={0} y={0} width={W} height={H} fill="#ffffff" />
 
       {conEncabezado && (
         <g>
           <text x={PAD_X} y={34} fontFamily={FUENTE} fontSize={21} fontWeight={700} fill={VERDE_OSCURO}>
-            NEXUS 360° · Distribución de la madurez
+            NEXUS 360° · Distribución de la etapa promedio
           </text>
           <text x={PAD_X} y={56} fontFamily={FUENTE} fontSize={F_NOTA} fill={APAGADO}>
             Generado el {fecha}
@@ -242,7 +242,7 @@ export function GraficaCampana({ secciones, ancho, conEncabezado = false, fecha 
 
           {curvas.every((c) => !c.resumen) && (
             <text x={xIzq} y={yFranjas + 50} fontFamily={FUENTE} fontSize={F_TEXTO} fill={APAGADO}>
-              Hace falta al menos dos dimensiones con respuestas en un formato para dibujar su curva.
+              Hace falta al menos dos materias con respuestas para dibujar la curva.
             </text>
           )}
 
@@ -257,7 +257,7 @@ export function GraficaCampana({ secciones, ancho, conEncabezado = false, fecha 
             </g>
           ))}
           <text x={(xIzq + xDer) / 2} y={base + 40} textAnchor="middle" fontFamily={FUENTE} fontSize={F_NOTA} fill={APAGADO}>
-            Promedio de madurez de cada dimensión (0 a 4)
+            Etapa promedio de cada materia (lectura interna, 0 a 4)
           </text>
           {nivelesTexto.length > 0 && (
             <text x={PAD_X} y={base + 62} fontFamily={FUENTE} fontSize={F_NOTA - 1} fill={APAGADO}>

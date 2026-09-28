@@ -4,7 +4,7 @@ import type { Seccion } from '../engine/agregados'
 import { VISTAS, infoVista, tablasDe } from '../engine/vistasGraficas'
 import type { Vista } from '../engine/vistasGraficas'
 import { GraficaSegunVista } from './GraficaSegunVista'
-import { IconoBarras, IconoCampana, IconoDescarga, IconoPastel } from './Iconos'
+import { IconoBarras, IconoCampana, IconoDescarga, IconoEtapas, IconoPastel } from './Iconos'
 import { useAncho } from './useAncho'
 import './graficas.css'
 
@@ -19,11 +19,12 @@ const ICONOS: Record<Vista, typeof IconoBarras> = {
   barras: IconoBarras,
   pastel: IconoPastel,
   campana: IconoCampana,
+  etapas: IconoEtapas,
 }
 
 /**
- * Las tres gráficas del panel en una sola tarjeta, con pestañas para
- * elegir entre barras, pastel y campana (patrón WAI-ARIA de pestañas:
+ * Las cuatro gráficas del panel en una sola tarjeta, con pestañas para
+ * elegir entre barras, pastel, etapas y campana (patrón WAI-ARIA de pestañas:
  * flechas izquierda/derecha, Inicio y Fin). Cada gráfica se puede bajar
  * en PDF, y sus datos exactos están siempre a un clic en una tabla, que
  * es también lo que leen los lectores de pantalla.

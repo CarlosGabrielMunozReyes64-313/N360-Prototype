@@ -24,7 +24,7 @@ export function Radar({ dimensiones, color = '#04a97a' }: Props) {
 
   return (
     <svg viewBox="0 0 360 360" style={{ width: '100%', maxWidth: 360, height: 'auto' }} role="img"
-      aria-label="Radar de madurez por dimensión">
+      aria-label="Forma del punto de partida por materia (lectura interna, sin puntaje)">
       {anillos.map((p, i) => (
         <polygon key={i} points={p} fill="none" stroke="#dde7e2" strokeWidth={1} />
       ))}

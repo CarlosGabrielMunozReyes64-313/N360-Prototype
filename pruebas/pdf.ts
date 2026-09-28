@@ -1,29 +1,25 @@
-import { construirDoc, nombreArchivo } from '../src/export/pdf'
-import { FORMATO_01 } from '../src/data/formato01'
-import { FORMATO_02 } from '../src/data/formato02'
-import { construirPlan, evaluarBanderas, evaluarFormato, lecturaCruzada } from '../src/engine/scoring'
-import type { Perfil, Respuestas, Tamizaje, Valor } from '../src/types'
+// Genera un informe de ejemplo en /tmp/informe.pdf para revisarlo a ojo:
+//   npx vite-node pruebas/pdf.ts
 import { writeFileSync } from 'node:fs'
+import { construirDoc, nombreArchivo } from '../src/export/pdf'
+import { PREGUNTAS } from '../src/data/rseExpress'
+import type { Diagnostico, Perfil, Tamizaje } from '../src/types'
 
-const tam: Tamizaje = { tamano: 'grande', empleados: '120', areasDeVida: 'si', cicloPrevio: 'no', comunidadesEtnicas: 'si', consumidorFinal: 'si' }
 const perfil: Perfil = { razonSocial: 'Agroindustrias del Guáitara S.A.S.', nit: '900123456', dv: '1', sector: 'agroindustrial', municipio: 'Pasto', departamento: 'Nariño', extranjera: false }
-
-const r: Respuestas = {}
-let i = 0
-for (const f of [FORMATO_01, FORMATO_02])
-  for (const d of f.dimensiones) for (const s of d.secciones) for (const p of s.preguntas)
-    r[p.id] = ([3, 2, 1, 3, 0, 2] as Valor[])[i++ % 6]
-r['4.4'] = 1
-
-const iso = evaluarFormato(FORMATO_01, r, 'agroindustrial', tam)
-const ley = evaluarFormato(FORMATO_02, r, 'agroindustrial', tam)
-const banderas = evaluarBanderas(ley)
-const doc = construirDoc({
-  perfil, tamizaje: tam, iso, ley, leyAplica: true, leyExigible: true, motivoLey: '',
-  cruce: lecturaCruzada(iso, ley, true), banderas,
-  plan: construirPlan(iso, ley, banderas, true),
-})
+const tamizaje: Tamizaje = {
+  tamano: 'pequena', ingresos: '1000m_10000m', personas: '32', vinculacion: ['laboral', 'temporada'],
+  vinculacionDetalle: '8 personas en cosecha', zonas: ['veredas', 'indigenas'], territorio: 'Vereda Jamondino',
+  clientes: 'mezcla', clientesDetalle: 'Tiendas y venta directa',
+}
+const etapas = [2, 1, 0, 3, 2, 'diferente', 1, 4, 'NA'] as const
+const diagnostico: Diagnostico = {
+  respuestas: Object.fromEntries(PREGUNTAS.map((p, i) => [p.id, {
+    texto: i % 3 === 0 ? '' : `Práctica de ejemplo para ${p.id}`, ejemplos: p.ejemplos.slice(0, i % 3), otro: '', etapa: etapas[i % etapas.length],
+  }])),
+  fortalecer: { '04': 'Manejo de residuos de la planta', '07': 'Relación con la vereda' },
+  comentarioFinal: 'Apoyamos la escuela de la vereda con transporte.',
+}
+const doc = construirDoc({ perfil, tamizaje, diagnostico, priorizacion: { filas: {}, elegida: null } })
 const buf = Buffer.from(doc.output('arraybuffer') as ArrayBuffer)
 writeFileSync('/tmp/informe.pdf', buf)
 console.log(`PDF generado: ${(buf.length / 1024).toFixed(1)} KB · ${doc.getNumberOfPages()} páginas · ${nombreArchivo(perfil)}`)
-console.log(`ISO ${iso.score?.toFixed(2)} · Ley ${ley.score?.toFixed(2)}/${ley.techo} · ${banderas.length} banderas`)

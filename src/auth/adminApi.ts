@@ -1,4 +1,5 @@
 import { API_URL } from './api'
+import type { EmpresaMia } from './empresaApi'
 import { AuthError } from './types'
 import type { Usuario } from './types'
 
@@ -52,11 +53,13 @@ export interface TamizajeActividad {
   razon_social: string
   anio: number
   tamano: string
-  empleados: number
-  areas_de_vida: string
-  ciclo_previo: boolean
-  comunidades_etnicas: boolean
-  consumidor_final: boolean
+  ingresos_rango: string | null
+  personas: number
+  vinculacion: string[]
+  zonas: string[]
+  territorio: string | null
+  clientes: string
+  actualizado_en: string
   creado_en: string
 }
 
@@ -209,6 +212,56 @@ export interface ConteoEstado {
   total: number
 }
 
+export interface ConteoCliente {
+  clientes: string
+  total: number
+}
+
+export interface ConteoEtapa {
+  /** '0'..'4', 'diferente' o 'NA'. */
+  etapa: string
+  total: number
+}
+
+export interface ConteoRango {
+  /** '1-9', '10-50', '51-200' o '201+'. */
+  rango: string
+  total: number
+}
+
+export interface ConteoMateria {
+  numero: string
+  materia: string
+  total: number
+}
+
+export interface ConteoMateriaEtapa extends ConteoMateria {
+  etapa: string
+}
+
+/** Empresas con cada alerta informativa (mismas reglas que la empresa ve). */
+export interface Alertas {
+  ley2173: number
+  sst: number
+  datos: number
+  territorio: number
+}
+
+/** Indicadores de la sección 10 del protocolo. */
+export interface IndicadoresDiagnostico {
+  empresas_con_tamizaje: number
+  empresas_perfil_piloto: number
+  empresas_con_diagnostico: number
+  empresas_con_practicas: number
+  practicas_registradas: number
+  respuestas_diferente: number
+  diferente_sin_clasificar: number
+  respuestas_na: number
+  materias_con_fortalecer: number
+  comentarios_finales: number
+}
+
+/** Promedio de la lectura INTERNA 0–4 por materia (uso de NEXUS). */
 export interface PromedioDimension {
   formato_id: string
   numero: string
@@ -221,13 +274,22 @@ export interface Estadisticas {
   resumen: ResumenGeneral
   empresas_por_sector: ConteoSector[]
   empresas_por_tamano: ConteoTamano[]
+  empresas_por_cliente: ConteoCliente[]
   diagnosticos_por_estado: ConteoEstado[]
+  respuestas_por_etapa: ConteoEtapa[]
   promedio_por_dimension: PromedioDimension[]
+  indicadores: IndicadoresDiagnostico
+  // Opcionales: un backend anterior no los manda y el panel no debe romperse.
+  empresas_por_personas?: ConteoRango[]
+  etapas_por_materia?: ConteoMateriaEtapa[]
+  practicas_por_materia?: ConteoMateria[]
+  retos_por_materia?: ConteoMateria[]
+  alertas?: Alertas
 }
 
-/** Una fila por empresa activa: perfil, tamizaje del ciclo más reciente y
- * estado actual de cada formato en ese ciclo. Los campos de tamizaje y de
- * diagnóstico son null cuando la empresa aún no tiene ciclo registrado. */
+/** Una fila por empresa activa: perfil, tamizaje vigente y avance del
+ * autodiagnóstico RSE Express. Los campos de tamizaje y de diagnóstico son
+ * null cuando la empresa aún no responde el tamizaje nuevo. */
 export interface EmpresaDetalle {
   empresa_id: string
   razon_social: string
@@ -240,13 +302,40 @@ export interface EmpresaDetalle {
   creado_en: string
   anio: number | null
   tamano: string | null
-  empleados: number | null
-  areas_de_vida: string | null
-  ciclo_previo: boolean | null
-  comunidades_etnicas: boolean | null
-  consumidor_final: boolean | null
-  iso26000_estado: string | null
-  ley2173_estado: string | null
+  ingresos_rango: string | null
+  personas: number | null
+  vinculacion: string[] | null
+  vinculacion_detalle: string | null
+  zonas: string[] | null
+  territorio: string | null
+  clientes: string | null
+  clientes_detalle: string | null
+  /** Criterio del piloto: entre 10 y 50 personas. */
+  perfil_piloto: boolean | null
+  diagnostico_estado: string | null
+  diagnostico_actualizado_en: string | null
+  respuestas_con_etapa: number
+  practicas_registradas: number
+  pendientes_clasificar: number
+}
+
+/** Lo que respondió una empresa (mismo formato que GET /empresa/mio). */
+export function obtenerDiagnosticoEmpresa(token: string, empresaId: string): Promise<EmpresaMia> {
+  return llamar(`/admin/empresas/${empresaId}/diagnostico`, token)
+}
+
+export interface Clasificacion {
+  respuesta_id: string
+  codigo: string
+  clasificada: number | null
+  clasificado_en: string | null
+}
+
+/** NEXUS clasifica (0–4) una respuesta «Hacemos algo diferente»; null la quita. */
+export function clasificarRespuesta(token: string, respuestaId: string, valor: number | null): Promise<Clasificacion> {
+  return llamar(`/admin/respuestas/${respuestaId}/clasificacion`, token, {
+    method: 'PUT', body: JSON.stringify({ valor }),
+  })
 }
 
 /** Conteos generales y distribuciones para el panel de estadísticas. */

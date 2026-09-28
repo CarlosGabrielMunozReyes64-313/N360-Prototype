@@ -1,3 +1,5 @@
+import type { Tamano, TipoCliente } from '../types'
+import { nombreCliente, nombreTamano, nombresVinculacion, nombresZonas } from '../data/tamizaje'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { AuthError } from '../auth/types'
@@ -780,8 +782,8 @@ function VistaActividad({
         <h3>Tamizaje anual</h3>
         {tamizajes.length === 0 ? (
           <p className="detalle-vacio">
-            Sin tamizajes guardados. La app todavía no envía el tamizaje al backend,
-            así que esta sección queda vacía hasta que existan esos endpoints.
+            Sin tamizajes guardados. Las cuentas que venían del instrumento anterior
+            aparecen aquí cuando responden el tamizaje nuevo «Conozcamos su empresa».
           </p>
         ) : (
           <ul className="lista-simple">
@@ -789,12 +791,13 @@ function VistaActividad({
               <li key={t.ciclo_id}>
                 <strong>{t.razon_social} · ciclo {t.anio}</strong>
                 <span>
-                  {t.tamano} · {t.empleados} empleados · Áreas de Vida: {t.areas_de_vida} ·
-                  {t.ciclo_previo ? ' con ciclo previo' : ' primer ciclo'} ·
-                  {t.comunidades_etnicas ? ' comunidades étnicas' : ' sin comunidades étnicas'} ·
-                  {t.consumidor_final ? ' consumidor final' : ' sin consumidor final'}
+                  {nombreTamano(t.tamano as Tamano)} · {t.personas} personas ({nombresVinculacion(t.vinculacion).toLowerCase()}) ·
+                  Clientes: {nombreCliente(t.clientes as TipoCliente).toLowerCase()} · Territorio: {[nombresZonas(t.zonas), t.territorio].filter((x) => x && x !== '—').join(' · ') || '—'}
                 </span>
-                <span className="evento-meta">Registrado el {formatearFecha(t.creado_en)}</span>
+                <span className="evento-meta">
+                  Registrado el {formatearFecha(t.creado_en)}
+                  {t.actualizado_en !== t.creado_en && ` · actualizado el ${formatearFecha(t.actualizado_en)}`}
+                </span>
               </li>
             ))}
           </ul>

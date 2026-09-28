@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Formato, Perfil, Respuestas, Tamizaje, Valor } from './types'
+import type { Diagnostico, Perfil, Priorizacion, RespuestaPregunta, Tamizaje } from './types'
 import type { Usuario } from './auth/types'
-import { FORMATO_01 } from './data/formato01'
-import { FORMATO_02 } from './data/formato02'
+import { AuthError } from './auth/types'
+import { RSE_EXPRESS } from './data/rseExpress'
+import { TAMIZAJE_VACIO, tamizajeCompleto } from './data/tamizaje'
+import { progreso } from './engine/scoring'
 import {
-  construirPlan, evaluarBanderas, evaluarFormato, leyAplicable, lecturaCruzada, progreso,
-} from './engine/scoring'
+  DIAGNOSTICO_VACIO, PRIORIZACION_VACIA, agregarAlHistorial, cargarBorrador, cargarDatos,
+  cargarHistorial, guardarBorrador, guardarDatos,
+} from './almacen'
+import type { HistorialEntrada } from './almacen'
 import { PerfilPaso } from './components/PerfilPaso'
 import { TamizajePaso } from './components/TamizajePaso'
 import { MenuFormatos } from './components/MenuFormatos'
@@ -14,100 +18,40 @@ import { Resultados } from './components/Resultados'
 import { EditarDatosPage } from './components/EditarDatosPage'
 import { MenuCuenta } from './components/MenuCuenta'
 import { useAuth } from './auth/AuthContext'
-import { guardarEmpresa, guardarRespuestas } from './auth/empresaApi'
+import {
+  diagnosticoDesdeApi, guardarDiagnostico, guardarEmpresa, obtenerMiEmpresa, payloadDiagnostico,
+  payloadEmpresa, perfilDesdeApi, priorizacionDesdeApi, tamizajeDesdeApi,
+} from './auth/empresaApi'
+import { useGuardadoDiferido } from './hooks/useGuardadoDiferido'
 import './topbar.css'
+import './rse.css'
 
-const FORMATOS: Formato[] = [FORMATO_01, FORMATO_02]
-const PASOS = ['Perfil', 'Tamizaje', 'Diagnóstico', 'Resultados']
+const PASOS = ['Perfil', 'Tamizaje', 'Autodiagnóstico', 'Resultados']
 
 const PERFIL_VACIO: Perfil = {
   razonSocial: '', nit: '', dv: '', sector: '',
   municipio: '', departamento: '', extranjera: false,
 }
-const TAMIZAJE_VACIO: Tamizaje = {
-  tamano: '', empleados: '', areasDeVida: '',
-  cicloPrevio: '', comunidadesEtnicas: '', consumidorFinal: '',
-}
 
 function perfilCompleto(p: Perfil): boolean {
   return Boolean(p.razonSocial && p.nit && p.sector && p.municipio)
 }
-function tamizajeCompleto(t: Tamizaje): boolean {
-  return Boolean(
-    t.tamano && t.empleados && t.areasDeVida &&
-    t.cicloPrevio && t.comunidadesEtnicas && t.consumidorFinal,
-  )
+
+function pasoInicial(p: Perfil, t: Tamizaje): number {
+  if (!perfilCompleto(p)) return 0
+  if (!tamizajeCompleto(t)) return 1
+  return 2
 }
 
-/** Todos los códigos de pregunta de un formato, para separar las
- * respuestas (que viven juntas en un solo objeto) por formato al
- * mandarlas al backend. */
-function codigosDeFormato(formato: Formato): string[] {
-  const codigos: string[] = []
-  for (const dim of formato.dimensiones) {
-    for (const sec of dim.secciones) {
-      for (const p of sec.preguntas) codigos.push(p.id)
-    }
+/** Conserva la clasificación que NEXUS hizo en el backend cuando la copia
+ * local es más nueva (la empresa nunca escribe ese campo). */
+function conClasificaciones(local: Diagnostico, remoto: Diagnostico): Diagnostico {
+  const respuestas: Record<string, RespuestaPregunta> = {}
+  for (const [k, r] of Object.entries(local.respuestas)) {
+    const rr = remoto.respuestas[k]
+    respuestas[k] = r.etapa === 'diferente' && rr?.etapa === 'diferente' ? { ...r, clasificada: rr.clasificada ?? null } : r
   }
-  return codigos
-}
-
-/** Guardado local por cuenta. Solo mientras no exista un endpoint de
- * backend para empresa/tamizaje — es la misma estrategia "front-only"
- * que ya usa la sesión de auth (localStorage), aplicada aquí a los
- * datos de perfil y tamizaje para que no se pidan de nuevo en cada login. */
-function claveDatos(usuarioId: string) {
-  return `n360_datos:${usuarioId}`
-}
-function cargarDatosGuardados(usuarioId: string): { perfil: Perfil; tamizaje: Tamizaje } | null {
-  try {
-    const raw = localStorage.getItem(claveDatos(usuarioId))
-    if (!raw) return null
-    const datos = JSON.parse(raw)
-    if (datos?.perfil && datos?.tamizaje) return datos
-    return null
-  } catch {
-    return null
-  }
-}
-function guardarDatos(usuarioId: string, perfil: Perfil, tamizaje: Tamizaje) {
-  try {
-    localStorage.setItem(claveDatos(usuarioId), JSON.stringify({ perfil, tamizaje }))
-  } catch {
-    /* si no hay almacenamiento disponible, simplemente no persiste */
-  }
-}
-
-/** Un registro del historial: el estado que estuvo activo hasta esta fecha
- * (justo antes de reemplazarse por uno nuevo). Se exporta el tipo para que
- * EditarDatosPage lo use sin duplicar la forma. */
-export interface HistorialEntrada {
-  fecha: string
-  perfil: Perfil
-  tamizaje: Tamizaje
-}
-
-function claveHistorial(usuarioId: string) {
-  return `n360_historial:${usuarioId}`
-}
-function cargarHistorial(usuarioId: string): HistorialEntrada[] {
-  try {
-    const raw = localStorage.getItem(claveHistorial(usuarioId))
-    const datos = raw ? JSON.parse(raw) : []
-    return Array.isArray(datos) ? datos : []
-  } catch {
-    return []
-  }
-}
-/** Append-only: nunca se borra nada de aquí, solo se agrega. */
-function agregarAlHistorial(usuarioId: string, entrada: HistorialEntrada) {
-  try {
-    const actual = cargarHistorial(usuarioId)
-    actual.push(entrada)
-    localStorage.setItem(claveHistorial(usuarioId), JSON.stringify(actual))
-  } catch {
-    /* si no hay almacenamiento disponible, simplemente no persiste */
-  }
+  return { ...local, respuestas }
 }
 
 interface Props {
@@ -117,143 +61,124 @@ interface Props {
 
 export default function App({ usuario, onLogout }: Props) {
   const { token } = useAuth()
-  const guardado = useMemo(() => cargarDatosGuardados(usuario.usuario_id), [usuario.usuario_id])
-  const yaCompletadoAlEntrar = Boolean(
-    guardado && perfilCompleto(guardado.perfil) && tamizajeCompleto(guardado.tamizaje),
-  )
+  const id = usuario.usuario_id
 
-  const [paso, setPaso] = useState(yaCompletadoAlEntrar ? 2 : 0)
-  const [perfil, setPerfil] = useState<Perfil>(guardado?.perfil ?? PERFIL_VACIO)
-  const [tamizaje, setTamizaje] = useState<Tamizaje>(guardado?.tamizaje ?? TAMIZAJE_VACIO)
-  const [completadoUnaVez, setCompletadoUnaVez] = useState(yaCompletadoAlEntrar)
+  // Lectura local (inmediata). Si había datos de la versión anterior, aquí
+  // mismo se migran: se conserva el perfil y se retira el tamizaje viejo.
+  const local = useMemo(() => cargarDatos(id), [id])
+  const borrador = useMemo(() => cargarBorrador(id), [id])
+
+  const [perfil, setPerfil] = useState<Perfil>(local.perfil ?? PERFIL_VACIO)
+  const [tamizaje, setTamizaje] = useState<Tamizaje>(local.tamizaje ?? TAMIZAJE_VACIO)
+  const [diag, setDiag] = useState<Diagnostico>(borrador?.diagnostico ?? DIAGNOSTICO_VACIO)
+  const [prior, setPrior] = useState<Priorizacion>(borrador?.priorizacion ?? PRIORIZACION_VACIA)
+  const [paso, setPaso] = useState(() => pasoInicial(local.perfil ?? PERFIL_VACIO, local.tamizaje ?? TAMIZAJE_VACIO))
+  const [hidratado, setHidratado] = useState(!token)
+  const [avisoActualizacion, setAvisoActualizacion] = useState(local.legado)
+  const [errorEmpresa, setErrorEmpresa] = useState<string | null>(null)
   const [editando, setEditando] = useState(false)
-  const [historial, setHistorial] = useState<HistorialEntrada[]>(() => cargarHistorial(usuario.usuario_id))
-  const [respuestas, setRespuestas] = useState<Respuestas>({})
-  const [abierto, setAbierto] = useState<Formato['id'] | null>(null)
+  const [historial, setHistorial] = useState<HistorialEntrada[]>(() => cargarHistorial(id))
+  const [abierto, setAbierto] = useState<number | null>(null)
 
-  // En cuanto perfil y tamizaje quedan completos (la primera vez, por el
-  // asistente normal, o después vía el modal de edición), se guardan para
-  // esta cuenta y se marca como "ya completado" — así el próximo login
-  // entra directo a Diagnóstico en vez de pedir todo de nuevo.
+  // Lo que está en el backend manda: el perfil, el tamizaje vigente y el
+  // autodiagnóstico. Si el backend no responde, se sigue con lo local.
   useEffect(() => {
-    if (perfilCompleto(perfil) && tamizajeCompleto(tamizaje)) {
-      guardarDatos(usuario.usuario_id, perfil, tamizaje)
-      setCompletadoUnaVez(true)
+    if (!token) return
+    let vivo = true
+    obtenerMiEmpresa(token)
+      .then((remoto) => {
+        if (!vivo || !remoto) return
+        const p = perfilDesdeApi(remoto.empresa)
+        const t = tamizajeDesdeApi(remoto.tamizaje) ?? local.tamizaje ?? TAMIZAJE_VACIO
+        setPerfil(p)
+        setTamizaje(t)
+        // Empresa guardada pero sin tamizaje = cuenta que venía del
+        // instrumento anterior (migración 009): se le explica el cambio.
+        if (!remoto.tamizaje && !local.tamizaje) setAvisoActualizacion(true)
 
-      // Best-effort: además de local, se manda al backend para que quede
-      // en la base de datos real (lo usa el panel de admin). Si falla
-      // (sin conexión, backend caído), no pasa nada — el front sigue
-      // funcionando exactamente igual con localStorage, como ya hacía.
-      if (token) {
-        guardarEmpresa(token, {
-          razon_social: perfil.razonSocial,
-          nit: perfil.nit,
-          dv: perfil.dv,
-          sector_id: perfil.sector,
-          municipio: perfil.municipio,
-          departamento: perfil.departamento || null,
-          extranjera: perfil.extranjera,
-          tamano: tamizaje.tamano as 'micro' | 'pequena' | 'mediana' | 'grande',
-          empleados: Number(tamizaje.empleados) || 0,
-          areas_de_vida: tamizaje.areasDeVida as 'si' | 'no' | 'nose',
-          ciclo_previo: tamizaje.cicloPrevio === 'si',
-          comunidades_etnicas: tamizaje.comunidadesEtnicas === 'si',
-          consumidor_final: tamizaje.consumidorFinal === 'si',
-        }).catch(() => { /* best-effort: sin red o backend caído, no rompe nada */ })
-      }
-    }
-  }, [perfil, tamizaje, usuario.usuario_id, token])
-
-  // Igual de best-effort: cada vez que cambian las respuestas del
-  // diagnóstico, se manda al backend la parte que le corresponde a cada
-  // formato (separadas, porque `respuestas` las mezcla todas juntas).
-  // Solo tiene sentido una vez existe la empresa+tamizaje del lado del
-  // backend (si no, el endpoint responde con un error controlado, que
-  // aquí simplemente se ignora).
-  useEffect(() => {
-    if (!token || !completadoUnaVez) return
-    for (const formato of FORMATOS) {
-      const codigosFormato = new Set(codigosDeFormato(formato))
-      const subset: Record<string, string> = {}
-      for (const [k, v] of Object.entries(respuestas)) {
-        if (codigosFormato.has(k)) subset[k] = String(v)
-      }
-      if (Object.keys(subset).length === 0) continue
-      const completo = progreso(formato, respuestas, tamizaje).completo
-      guardarRespuestas(token, formato.id, { respuestas: subset, completo })
-        .catch(() => { /* best-effort */ })
-    }
-  }, [respuestas, completadoUnaVez, token, tamizaje])
-
-  const responder = (id: string, v: Valor) =>
-    setRespuestas((r) => ({ ...r, [id]: v }))
-
-  /** T6 en «no» deja la materia de consumidores fuera del cálculo por defecto. */
-  const irAFormatos = () => {
-    if (tamizaje.consumidorFinal === 'no') {
-      setRespuestas((r) => {
-        const next = { ...r }
-        for (const k of ['consumidores.a', 'consumidores.b', 'consumidores.c'])
-          if (next[k] === undefined) next[k] = 'NA'
-        return next
+        const d = diagnosticoDesdeApi(remoto.diagnostico)
+        if (d && remoto.diagnostico) {
+          const localMasNuevo = borrador?.guardadoEn
+            && new Date(borrador.guardadoEn).getTime() > new Date(remoto.diagnostico.actualizado_en).getTime()
+          if (localMasNuevo && borrador) {
+            const combinado = conClasificaciones(borrador.diagnostico, d)
+            setDiag(combinado)
+            // Lo local no alcanzó a llegar al backend: se manda ya.
+            guardarDiagnostico(token, payloadDiagnostico(combinado, borrador.priorizacion,
+              progreso(RSE_EXPRESS, combinado, t).completo)).catch(() => {})
+          } else {
+            setDiag(d)
+            setPrior(priorizacionDesdeApi(remoto.diagnostico))
+          }
+        }
+        setPaso(pasoInicial(p, t))
       })
+      .catch(() => { /* sin red o backend caído: se sigue con lo guardado en el navegador */ })
+      .finally(() => { if (vivo) setHidratado(true) })
+    return () => { vivo = false }
+  }, [token, id, local, borrador])
+
+  const completadoUnaVez = perfilCompleto(perfil) && tamizajeCompleto(tamizaje)
+  const prog = useMemo(() => progreso(RSE_EXPRESS, diag, tamizaje), [diag, tamizaje])
+
+  // Copia local inmediata.
+  useEffect(() => { if (hidratado) guardarDatos(id, perfil, tamizaje) }, [hidratado, id, perfil, tamizaje])
+  useEffect(() => { if (hidratado) guardarBorrador(id, diag, prior) }, [hidratado, id, diag, prior])
+
+  // Backend, con un respiro entre envíos (ver useGuardadoDiferido).
+  const datosEmpresa = useMemo(
+    () => (completadoUnaVez ? payloadEmpresa(perfil, tamizaje) : null),
+    [completadoUnaVez, perfil, tamizaje],
+  )
+  useGuardadoDiferido(datosEmpresa, async (v) => {
+    if (!v || !token) return
+    try {
+      await guardarEmpresa(token, v)
+      setErrorEmpresa(null)
+    } catch (e) {
+      if (e instanceof AuthError && (e.code === 'CONFLICTO' || e.code === 'VALIDACION')) setErrorEmpresa(e.message)
+      throw e
     }
-    setPaso(2)
-  }
+  }, { activo: hidratado && Boolean(token), ms: 600 })
 
-  const ley = leyAplicable(tamizaje)
-
-  const resIso = useMemo(() => {
-    const p = progreso(FORMATO_01, respuestas, tamizaje)
-    return p.hechas > 0 ? evaluarFormato(FORMATO_01, respuestas, perfil.sector, tamizaje) : null
-  }, [respuestas, perfil.sector, tamizaje])
-
-  const resLey = useMemo(() => {
-    const p = progreso(FORMATO_02, respuestas, tamizaje)
-    return p.hechas > 0 ? evaluarFormato(FORMATO_02, respuestas, perfil.sector, tamizaje) : null
-  }, [respuestas, perfil.sector, tamizaje])
-
-  const banderas = useMemo(() => evaluarBanderas(ley.aplica ? resLey : null), [resLey, ley.aplica])
-  const cruce = useMemo(
-    () => lecturaCruzada(resIso, ley.aplica ? resLey : null, ley.exigible),
-    [resIso, resLey, ley.aplica, ley.exigible],
+  const datosDiagnostico = useMemo(
+    () => (completadoUnaVez ? payloadDiagnostico(diag, prior, prog.completo) : null),
+    [completadoUnaVez, diag, prior, prog.completo],
   )
-  const plan = useMemo(
-    () => construirPlan(resIso, ley.aplica ? resLey : null, banderas, ley.exigible),
-    [resIso, resLey, banderas, ley.aplica, ley.exigible],
-  )
+  useGuardadoDiferido(datosDiagnostico, async (v) => {
+    if (v && token) await guardarDiagnostico(token, v)
+  }, { activo: hidratado && Boolean(token), ms: 1200 })
+
+  const responder = (preguntaId: string, r: RespuestaPregunta) =>
+    setDiag((d) => ({ ...d, respuestas: { ...d.respuestas, [preguntaId]: r } }))
+  const escribirFortalecer = (numero: string, texto: string) =>
+    setDiag((d) => ({ ...d, fortalecer: { ...d.fortalecer, [numero]: texto } }))
+  const escribirComentario = (texto: string) => setDiag((d) => ({ ...d, comentarioFinal: texto }))
 
   const puedeAvanzar = (p: number) => {
     if (p === 0) return perfilCompleto(perfil)
     if (p === 1) return tamizajeCompleto(tamizaje)
-    if (p === 2) return FORMATOS.some((f) => progreso(f, respuestas, tamizaje).completo)
+    if (p === 2) return prog.completo
     return true
   }
 
+  const ir = (i: number) => { setPaso(i); setAbierto(null); window.scrollTo(0, 0) }
+
   const irA = (i: number) => {
-    // Una vez completados perfil+tamizaje, esos dos pasos quedan bloqueados
-    // en la barra de pasos: la única forma de cambiarlos es Configuración
-    // (menú de la foto de perfil, arriba) → «Datos y tamizaje».
+    // Con perfil y tamizaje completos, esos dos pasos se cambian desde
+    // Configuración → «Datos y tamizaje» (queda registro en el historial).
     if (completadoUnaVez && i < 2 && i !== paso) return
-    if (i <= paso || (i === paso + 1 && puedeAvanzar(paso))) {
-      setPaso(i); setAbierto(null); window.scrollTo(0, 0)
-    }
+    if (i <= paso || (i === paso + 1 && puedeAvanzar(paso))) ir(i)
   }
 
   const guardarEdicion = (p: Perfil, t: Tamizaje) => {
-    // No se pierde nada: la versión que estaba activa queda archivada en
-    // el historial (con la fecha de este cambio) ANTES de reemplazarla.
-    // El historial es de solo lectura — no hay forma de borrar entradas.
     const entrada: HistorialEntrada = { fecha: new Date().toISOString(), perfil, tamizaje }
-    agregarAlHistorial(usuario.usuario_id, entrada)
+    agregarAlHistorial(id, entrada)
     setHistorial((h) => [...h, entrada])
-
     setPerfil(p)
     setTamizaje(t)
     setEditando(false)
   }
-
-  const formatoAbierto = FORMATOS.find((f) => f.id === abierto)
 
   if (editando) {
     return (
@@ -274,7 +199,7 @@ export default function App({ usuario, onLogout }: Props) {
         <div className="header-top">
           <div>
             <div className="brand-name">NEXUS 360°</div>
-            <div className="brand-sub">Diagnóstico normativo · ISO 26000 y Ley 2173</div>
+            <div className="brand-sub">Autodiagnóstico RSE Express · ISO 26000</div>
           </div>
 
           <MenuCuenta
@@ -294,7 +219,7 @@ export default function App({ usuario, onLogout }: Props) {
               <li key={label}>
                 <button
                   className={'step' + (i === paso ? ' is-active' : i < paso ? ' is-done' : '')}
-                  disabled={bloqueadoPorEdicion || (i > paso && !(i === paso + 1 && puedeAvanzar(paso)))}
+                  disabled={!hidratado || bloqueadoPorEdicion || (i > paso && !(i === paso + 1 && puedeAvanzar(paso)))}
                   onClick={() => irA(i)}
                 >
                   <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
@@ -307,39 +232,61 @@ export default function App({ usuario, onLogout }: Props) {
       </header>
 
       <main>
-        {paso === 0 && (
-          <PerfilPaso perfil={perfil} onChange={setPerfil} onNext={() => { setPaso(1); window.scrollTo(0, 0) }} />
+        {errorEmpresa && (
+          <div className="note note-alert" role="alert">
+            <strong>No pudimos guardar los datos de la empresa.</strong> {errorEmpresa}
+          </div>
         )}
 
-        {paso === 1 && (
-          <TamizajePaso tamizaje={tamizaje} onChange={setTamizaje}
-            onBack={() => setPaso(0)} onNext={() => { irAFormatos(); window.scrollTo(0, 0) }} />
+        {!hidratado && (
+          <section className="card"><p className="lede">Cargando los datos de su empresa…</p></section>
         )}
 
-        {paso === 2 && !formatoAbierto && (
-          <MenuFormatos formatos={FORMATOS} respuestas={respuestas} tamizaje={tamizaje}
-            onAbrir={(id) => { setAbierto(id); window.scrollTo(0, 0) }}
-            onResultados={() => { setPaso(3); window.scrollTo(0, 0) }} />
+        {hidratado && paso === 0 && (
+          <PerfilPaso perfil={perfil} onChange={setPerfil} onNext={() => ir(1)} />
         )}
 
-        {paso === 2 && formatoAbierto && (
-          <Cuestionario formato={formatoAbierto} respuestas={respuestas} sector={perfil.sector}
-            tamizaje={tamizaje} onAnswer={responder}
-            onSalir={() => { setAbierto(null); window.scrollTo(0, 0) }} />
+        {hidratado && paso === 1 && (
+          <TamizajePaso
+            tamizaje={tamizaje} onChange={setTamizaje}
+            avisoActualizacion={avisoActualizacion}
+            onBack={() => ir(0)}
+            onNext={() => { setAvisoActualizacion(false); ir(2) }}
+          />
         )}
 
-        {paso === 3 && (
-          <Resultados perfil={perfil} tamizaje={tamizaje} iso={resIso} ley={resLey}
-            leyAplica={ley.aplica} leyExigible={ley.exigible} motivoLey={ley.motivo}
-            cruce={cruce} banderas={banderas} plan={plan}
-            onBack={() => { setPaso(2); window.scrollTo(0, 0) }} />
+        {hidratado && paso === 2 && abierto === null && (
+          <MenuFormatos
+            instrumento={RSE_EXPRESS} diagnostico={diag} tamizaje={tamizaje}
+            onAbrir={(i) => { setAbierto(i); window.scrollTo(0, 0) }}
+            onResultados={() => ir(3)}
+          />
+        )}
+
+        {hidratado && paso === 2 && abierto !== null && (
+          <Cuestionario
+            instrumento={RSE_EXPRESS} diagnostico={diag} tamizaje={tamizaje}
+            materiaInicial={abierto}
+            onRespuesta={responder}
+            onFortalecer={escribirFortalecer}
+            onComentario={escribirComentario}
+            onSalir={() => { setAbierto(null); window.scrollTo(0, 0) }}
+            onResultados={prog.completo ? () => ir(3) : undefined}
+          />
+        )}
+
+        {hidratado && paso === 3 && (
+          <Resultados
+            perfil={perfil} tamizaje={tamizaje} diagnostico={diag}
+            priorizacion={prior} onPriorizacion={setPrior}
+            onBack={() => ir(2)}
+          />
         )}
       </main>
 
       <footer className="app-footer">
-        Prototipo de autoevaluación. No constituye concepto jurídico. Los datos del
-        diagnóstico no se conservan al recargar la página; el perfil y el tamizaje
-        sí quedan guardados para esta cuenta.
+        Autodiagnóstico, no auditoría: no verifica cumplimiento legal ni constituye concepto
+        jurídico. Sus respuestas se guardan en su cuenta a medida que avanza.
       </footer>
     </>
   )

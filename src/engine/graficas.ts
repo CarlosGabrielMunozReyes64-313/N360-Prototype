@@ -34,10 +34,10 @@ export const MONO = '"IBM Plex Mono", "SFMono-Regular", Consolas, "Courier New",
  * ΔE ≥ 30 en visión típica, deuteranopía y protanopía.
  */
 export const NIVELES = [
-  { etiqueta: 'Sin gestión', desde: 0, hasta: 1.5, color: '#a8322a' },
-  { etiqueta: 'Informal', desde: 1.5, hasta: 2.5, color: '#c5881e' },
-  { etiqueta: 'Planificado', desde: 2.5, hasta: 3.5, color: '#025873' },
-  { etiqueta: 'Consolidado', desde: 3.5, hasta: 4, color: '#04a97a' },
+  { etiqueta: 'Comenzando', desde: 0, hasta: 1.5, color: '#a8322a' },
+  { etiqueta: 'Organizado', desde: 1.5, hasta: 2.5, color: '#c5881e' },
+  { etiqueta: 'Con resultados', desde: 2.5, hasta: 3.5, color: '#025873' },
+  { etiqueta: 'En mejora continua', desde: 3.5, hasta: 4, color: '#04a97a' },
 ] as const
 
 export function nivelDe(promedio: number) {

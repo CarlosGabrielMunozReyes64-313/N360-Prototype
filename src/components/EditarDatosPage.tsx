@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Perfil, Tamizaje } from '../types'
-import type { HistorialEntrada } from '../App'
+import type { HistorialEntrada } from '../almacen'
+import { nombreCliente, nombreTamano } from '../data/tamizaje'
 import { PerfilPaso } from './PerfilPaso'
 import { TamizajePaso } from './TamizajePaso'
 import { MiCuentaTab } from './MiCuentaTab'
@@ -114,7 +115,9 @@ export function EditarDatosPage({
                       Sector: {h.perfil.sector || '—'} · {h.perfil.municipio || '—'}, {h.perfil.departamento || '—'}
                     </div>
                     <div className="historial-meta">
-                      Tamaño: {h.tamizaje.tamano || '—'} · Empleados: {h.tamizaje.empleados || '—'}
+                      {h.tamizaje
+                        ? <>Tamaño: {nombreTamano(h.tamizaje.tamano)} · Personas: {h.tamizaje.personas || '—'} · Clientes: {nombreCliente(h.tamizaje.clientes)}</>
+                        : 'Tamizaje del instrumento anterior (se retiró con la actualización al Autodiagnóstico RSE Express).'}
                     </div>
                   </li>
                 ))}

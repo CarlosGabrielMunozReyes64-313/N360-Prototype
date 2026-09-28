@@ -1,15 +1,16 @@
-import type { Seccion } from './agregados'
-import { nivelDe, numero, rebanadas, resumenPonderado } from './graficas'
+import type { Barra, Seccion } from './agregados'
+import { nivelDe, numero, porcentajesEnteros, rebanadas, resumenPonderado } from './graficas'
 import type { PuntoCampana, ResumenCampana } from './graficas'
 
 /**
- * Las tres vistas de la pestaña de estadísticas (barras, pastel y
- * campana): qué datos usa cada una, cómo se explica y su tabla de datos.
+ * Las cuatro vistas de la pestaña de estadísticas (barras, pastel, campana
+ * y etapas por materia): qué datos usa cada una, cómo se explica y su
+ * tabla de datos.
  * La pantalla y el PDF leen de aquí, así que no pueden contar cosas
  * distintas.
  */
 
-export type Vista = 'barras' | 'pastel' | 'campana'
+export type Vista = 'barras' | 'pastel' | 'campana' | 'etapas'
 
 export interface InfoVista {
   id: Vista
@@ -24,26 +25,36 @@ export const VISTAS: InfoVista[] = [
     nombre: 'Barras',
     titulo: 'Todo el tablero en barras',
     descripcion:
-      'El valor exacto va escrito al final de cada barra. Los conteos y la madurez están en '
+      'El valor exacto va escrito al final de cada barra. Los conteos y la etapa promedio están en '
       + 'paneles separados porque usan escalas distintas: los conteos son cantidades y la '
-      + 'madurez es un promedio de 0 a 4.',
+      + 'etapa promedio es la lectura interna de 0 a 4.',
   },
   {
     id: 'pastel',
     nombre: 'Pastel',
     titulo: 'Cómo se reparte cada total',
     descripcion:
-      'Un pastel por cada reparto de un total: sectores, tamaños y estados de los diagnósticos. '
-      + 'El resumen general y la madurez no aparecen aquí porque no son partes de un todo; '
-      + 'se ven en las barras y en la campana.',
+      'Un pastel por cada reparto de un total: sectores, tamaños, clientes, etapas, prácticas y retos. '
+      + 'El resumen general, las alertas y la etapa promedio no aparecen aquí porque no son partes de '
+      + 'un todo (una empresa puede tener varias alertas); se ven en las barras y en la campana.',
+  },
+  {
+    id: 'etapas',
+    nombre: 'Etapas',
+    titulo: 'En qué punto están las empresas en cada materia',
+    descripcion:
+      'Una barra por materia con el reparto de las respuestas según «¿En qué punto está?»: de «Aún no '
+      + 'lo hemos abordado» a «Lo revisamos y mejoramos», más «Hacemos algo diferente» y «No aplica». '
+      + 'Cada barra suma 100 % y a la derecha va el número de respuestas. Es la vista que mejor '
+      + 'muestra dónde están las oportunidades comunes del grupo.',
   },
   {
     id: 'campana',
     nombre: 'Campana',
-    titulo: 'Cómo se distribuye la madurez',
+    titulo: 'Cómo se distribuye la etapa promedio',
     descripcion:
-      'Cada punto es una dimensión, ubicada según su promedio. La curva de cada formato muestra '
-      + 'alrededor de qué valor se concentran sus dimensiones (la media) y qué tan dispersas están '
+      'Cada punto es una materia, ubicada según su etapa promedio. La curva de cada formato muestra '
+      + 'alrededor de qué valor se concentran sus materias (la media) y qué tan dispersas están '
       + '(entre más ancha, más dispersas). La franja sombreada cubre una desviación a cada lado de '
       + 'la media, donde cae cerca del 68 % de los casos. Las curvas se dibujan a la misma altura '
       + 'para comparar su forma.',
@@ -59,8 +70,37 @@ export function infoVista(vista: Vista): InfoVista {
 /** Solo repartos de un total, y solo si tienen algo que repartir. */
 export function seccionesPastel(secciones: Seccion[]): Seccion[] {
   return secciones.filter(
-    (s) => s.escala === 'conteo' && s.id !== 'resumen' && s.barras.some((b) => b.valor > 0),
+    (s) => s.escala === 'conteo' && s.id !== 'resumen' && s.id !== 'alertas' && s.barras.some((b) => b.valor > 0),
   )
+}
+
+// ----------------------------------------------------------------- etapas
+
+export interface SegmentoEtapa extends Barra {
+  porcentaje: number
+}
+
+export interface FilaEtapas {
+  materia: string
+  total: number
+  segmentos: SegmentoEtapa[]
+}
+
+/** Una fila por materia con sus respuestas por etapa, en el orden de la
+ * escala. Los porcentajes se redondean para que cada fila sume 100. */
+export function filasEtapas(secciones: Seccion[]): FilaEtapas[] {
+  const barras = secciones.filter((s) => s.escala === 'distribucion').flatMap((s) => s.barras)
+  const grupos = new Map<string, Barra[]>()
+  for (const b of barras) {
+    if (b.valor <= 0) continue
+    const nombre = b.grupo ?? 'Sin materia'
+    grupos.set(nombre, [...(grupos.get(nombre) ?? []), b])
+  }
+  return [...grupos.entries()].map(([materia, bs]) => {
+    const total = bs.reduce((t, b) => t + b.valor, 0)
+    const pct = porcentajesEnteros(bs.map((b) => b.valor))
+    return { materia, total, segmentos: bs.map((b, i) => ({ ...b, porcentaje: pct[i] })) }
+  })
 }
 
 // ----------------------------------------------------------------- campana
@@ -72,12 +112,12 @@ export interface GrupoCampana {
   resumen: ResumenCampana | null
 }
 
-/** Una curva por formato (ISO 26000, Ley 2173), con sus dimensiones. */
+/** Una curva por formato (hoy solo RSE Express), con sus materias. */
 export function gruposCampana(secciones: Seccion[]): GrupoCampana[] {
   const barras = secciones.filter((s) => s.escala === 'madurez').flatMap((s) => s.barras)
   const grupos: GrupoCampana[] = []
   for (const b of barras) {
-    const nombre = b.grupo ?? 'Madurez'
+    const nombre = b.grupo ?? 'Etapa promedio'
     let g = grupos.find((x) => x.nombre === nombre)
     if (!g) {
       g = { nombre, puntos: [], resumen: null }
@@ -92,7 +132,7 @@ export function gruposCampana(secciones: Seccion[]): GrupoCampana[] {
 /** Texto de una línea con las cifras de una curva. */
 export function describirResumen(r: ResumenCampana): string {
   return `media ${numero(r.media, 2)} (${nivelDe(r.media).etiqueta.toLowerCase()}) · `
-    + `desviación ${numero(r.desviacion, 2)} · ${r.n} dimensiones`
+    + `desviación ${numero(r.desviacion, 2)} · ${r.n} materias`
 }
 
 // ------------------------------------------------------------------ tablas
@@ -124,17 +164,17 @@ export function tablasDe(vista: Vista, secciones: Seccion[]): Tabla[] {
       {
         titulo: 'Resumen por formato',
         columnas: [
-          { titulo: 'Formato' }, { titulo: 'Dimensiones', numerica: true }, { titulo: 'Media', numerica: true },
+          { titulo: 'Formato' }, { titulo: 'Materias', numerica: true }, { titulo: 'Media', numerica: true },
           { titulo: 'Desviación', numerica: true }, { titulo: 'Nivel de la media' },
         ],
         filas: grupos.map((g) => g.resumen
           ? [g.nombre, String(g.resumen.n), numero(g.resumen.media, 2), numero(g.resumen.desviacion, 2), nivelDe(g.resumen.media).etiqueta]
-          : [g.nombre, String(g.puntos.length), '—', '—', 'Faltan dimensiones']),
+          : [g.nombre, String(g.puntos.length), '—', '—', 'Faltan materias']),
       },
       {
-        titulo: 'Promedio por dimensión',
+        titulo: 'Promedio por materia',
         columnas: [
-          { titulo: 'Formato' }, { titulo: 'Dimensión' }, { titulo: 'Promedio', numerica: true },
+          { titulo: 'Formato' }, { titulo: 'Materia' }, { titulo: 'Promedio', numerica: true },
           { titulo: 'Nivel' }, { titulo: 'Respuestas', numerica: true },
         ],
         filas: grupos.flatMap((g) => g.puntos.map((p) => [
@@ -148,10 +188,20 @@ export function tablasDe(vista: Vista, secciones: Seccion[]): Tabla[] {
     ]
   }
 
+  if (vista === 'etapas') {
+    return [{
+      titulo: 'Respuestas por materia y etapa',
+      columnas: [{ titulo: 'Materia' }, { titulo: 'Etapa' }, { titulo: 'Respuestas', numerica: true }, { titulo: 'Porcentaje', numerica: true }],
+      filas: filasEtapas(secciones).flatMap((f) => f.segmentos.map((g) => [
+        f.materia, g.etiqueta, numero(g.valor), `${g.porcentaje} %`,
+      ])),
+    }]
+  }
+
   return [{
     titulo: 'Datos de la gráfica',
     columnas: [{ titulo: 'Sección' }, { titulo: 'Concepto' }, { titulo: 'Valor', numerica: true }, { titulo: 'Detalle' }],
-    filas: secciones.flatMap((s) => s.barras.map((b) => s.escala === 'madurez'
+    filas: secciones.filter((s) => s.escala !== 'distribucion').flatMap((s) => s.barras.map((b) => s.escala === 'madurez'
       ? [s.titulo, b.etiquetaLarga, numero(b.valor, 2), `${nivelDe(b.valor).etiqueta}${b.nota ? ` · ${b.nota}` : ''}`]
       : [s.titulo, b.etiquetaLarga, numero(b.valor), s.unidad])),
   }]

@@ -36,7 +36,7 @@ export function Login({ onIrARegistro }: Props) {
       <div className="auth-card card">
         <div className="auth-brand">
           <div className="brand-name">NEXUS 360°</div>
-          <div className="brand-sub">Diagnóstico normativo · ISO 26000 y Ley 2173</div>
+          <div className="brand-sub">Autodiagnóstico RSE Express · ISO 26000</div>
         </div>
 
         <h1 className="title" style={{ fontSize: 20, marginBottom: 4 }}>Iniciar sesión</h1>

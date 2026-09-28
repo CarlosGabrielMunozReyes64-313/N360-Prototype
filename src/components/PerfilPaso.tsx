@@ -1,5 +1,5 @@
 import type { Perfil, SectorId } from '../types'
-import { SECTORES } from '../data/formato01'
+import { SECTORES } from '../data/rseExpress'
 import { DEPARTAMENTOS_COLOMBIA, municipiosDe } from '../data/colombia'
 
 interface Props {
@@ -37,8 +37,8 @@ export function PerfilPaso({ perfil, onChange, onNext, textoBoton, ocultarNota }
       <div className="eyebrow">Paso 01 — Perfil</div>
       <h1 className="title">Datos de la empresa</h1>
       <p className="lede">
-        Solo datos que no cambian solos. El número de empleados y el tamaño por ingresos
-        se preguntan en el tamizaje, porque son datos de un año concreto.
+        Solo datos básicos que no cambian con frecuencia. El tamaño, las personas que trabajan
+        con la empresa y sus clientes se preguntan en el siguiente paso, «Conozcamos su empresa».
       </p>
 
       <div className="grid-2">
@@ -70,7 +70,7 @@ export function PerfilPaso({ perfil, onChange, onNext, textoBoton, ocultarNota }
             <option value="">Seleccione…</option>
             {SECTORES.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </select>
-          <span className="hint">Define el peso de cada materia en el Formato 01.</span>
+          <span className="hint">Nos ayuda a leer sus respuestas según la actividad de la empresa.</span>
         </div>
 
         <div className="field">
@@ -94,7 +94,6 @@ export function PerfilPaso({ perfil, onChange, onNext, textoBoton, ocultarNota }
             <option value="">{perfil.departamento ? 'Seleccione…' : 'Elige primero el departamento'}</option>
             {municipiosDe(perfil.departamento).map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
-          <span className="hint">Determina si la Ley 2173 ya es exigible.</span>
         </div>
 
         <div className="field field-wide">
@@ -106,23 +105,18 @@ export function PerfilPaso({ perfil, onChange, onNext, textoBoton, ocultarNota }
                 onClick={() => set('extranjera', v === 'si')}>{t}</button>
             ))}
           </div>
-          {perfil.extranjera && (
-            <span className="hint">
-              No podrá cumplir la Ley 2173 en modalidad de asocio con otras empresas.
-            </span>
-          )}
         </div>
       </div>
 
       {!ocultarNota && (
         <div className="note">
-          Este prototipo arranca en el perfil. El acceso con cuenta va antes y se
-          integra aparte; los datos no se conservan al recargar la página.
+          Estos datos identifican a su empresa y se guardan en su cuenta. Si otra cuenta ya
+          registró el mismo NIT, el administrador de NEXUS puede vincularle el acceso.
         </div>
       )}
 
       <div className="nav-footer">
-        <span className="progress-text">Los campos marcados alimentan el cálculo</span>
+        <span className="progress-text">Paso 1 de 4 · Datos básicos de la empresa</span>
         <button className="btn" disabled={!listo} onClick={onNext}>
           {textoBoton ?? 'Continuar al tamizaje'}
         </button>

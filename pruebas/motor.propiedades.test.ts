@@ -1,100 +1,81 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
-import { FORMATO_01, PESOS_SECTOR } from '../src/data/formato01'
-import { FORMATO_02 } from '../src/data/formato02'
-import { evaluarFormato, progreso } from '../src/engine/scoring'
-import type { Formato, Respuestas, SectorId, Tamizaje, Valor } from '../src/types'
+import { PESOS_SECTOR, PREGUNTAS, RSE_EXPRESS } from '../src/data/rseExpress'
+import { evaluar, oportunidades, progreso, sumaPrioridad } from '../src/engine/scoring'
+import type { Diagnostico, Etapa, SectorId, Tamizaje } from '../src/types'
 
-const VALORES: Valor[] = [0, 1, 2, 3, 4, 'NA']
+const ETAPAS: (Etapa | null)[] = [0, 1, 2, 3, 4, 'diferente', 'NA', null]
 const SECTORES = Object.keys(PESOS_SECTOR) as SectorId[]
 
-const idsDe = (f: Formato): string[] =>
-  f.dimensiones.flatMap(d => d.secciones.flatMap(s => s.preguntas.map(p => p.id)))
-
-/** Genera un juego de respuestas completo para el formato dado. */
-const respuestasArb = (f: Formato) => {
-  const ids = idsDe(f)
-  return fc.array(fc.constantFrom(...VALORES), { minLength: ids.length, maxLength: ids.length })
-    .map(vals => Object.fromEntries(ids.map((id, i) => [id, vals[i]])) as Respuestas)
-}
+const diagnosticoArb = fc
+  .array(fc.record({
+    etapa: fc.constantFrom(...ETAPAS),
+    texto: fc.constantFrom('', 'Lo hacemos'),
+    clasificada: fc.constantFrom(null, 0, 1, 2, 3, 4),
+  }), { minLength: PREGUNTAS.length, maxLength: PREGUNTAS.length })
+  .map((vals): Diagnostico => ({
+    respuestas: Object.fromEntries(PREGUNTAS.map((p, i) => [p.id, {
+      texto: vals[i].texto, ejemplos: [], otro: '', etapa: vals[i].etapa,
+      clasificada: vals[i].etapa === 'diferente' ? (vals[i].clasificada as 0 | null) : null,
+    }])),
+    fortalecer: {},
+    comentarioFinal: '',
+  }))
 
 const tamizajeArb = fc.record<Tamizaje>({
-  tamano: fc.constantFrom('micro', 'pequena', 'mediana', 'grande'),
-  empleados: fc.integer({ min: 0, max: 5000 }).map(String),
-  areasDeVida: fc.constantFrom('si', 'no', 'nose'),
-  cicloPrevio: fc.constantFrom('si', 'no'),
-  comunidadesEtnicas: fc.constantFrom('si', 'no'),
-  consumidorFinal: fc.constantFrom('si', 'no'),
+  tamano: fc.constantFrom('micro', 'pequena', 'mediana', 'nose'),
+  ingresos: fc.constantFrom(''),
+  personas: fc.integer({ min: 1, max: 500 }).map(String),
+  vinculacion: fc.constant(['laboral']),
+  vinculacionDetalle: fc.constant(''),
+  zonas: fc.subarray(['barrios', 'veredas', 'rural', 'indigenas', 'afro', 'otras'] as const).map((z) => [...z]),
+  territorio: fc.constant('Centro'),
+  clientes: fc.constantFrom('personas', 'empresas', 'publicas', 'mezcla'),
+  clientesDetalle: fc.constant(''),
 })
 
-describe('Invariantes del motor (property-based)', () => {
-  it('el puntaje del Formato 01 nunca sale del rango [0, techo]', () => {
-    fc.assert(fc.property(
-      respuestasArb(FORMATO_01), fc.constantFrom(...SECTORES), tamizajeArb,
-      (respuestas, sector, tam) => {
-        const r = evaluarFormato(FORMATO_01, respuestas, sector, tam)
-        if (r.score === null) return true
-        expect(r.score).toBeGreaterThanOrEqual(0)
-        expect(r.score).toBeLessThanOrEqual(r.techo + 1e-9)
-        return true
-      },
-    ), { numRuns: 300 })
+describe('invariantes del motor RSE Express (property-based)', () => {
+  it('la lectura interna siempre queda entre 0 y 4 y la cobertura entre 0 y 1', () => {
+    fc.assert(fc.property(diagnosticoArb, tamizajeArb, fc.constantFrom(...SECTORES), (d, t, s) => {
+      const res = evaluar(RSE_EXPRESS, d, s, t)
+      if (res.score !== null) expect(res.score).toBeGreaterThanOrEqual(0)
+      if (res.score !== null) expect(res.score).toBeLessThanOrEqual(4 + 1e-9)
+      expect(res.cobertura).toBeGreaterThanOrEqual(0)
+      expect(res.cobertura).toBeLessThanOrEqual(1 + 1e-9)
+      for (const m of res.materias) if (m.score !== null) expect(m.score).toBeLessThanOrEqual(4 + 1e-9)
+    }))
   })
 
-  it('el puntaje del Formato 02 respeta el techo de primer ciclo', () => {
-    fc.assert(fc.property(
-      respuestasArb(FORMATO_02), tamizajeArb,
-      (respuestas, tam) => {
-        const r = evaluarFormato(FORMATO_02, respuestas, '', tam)
-        expect(r.techo).toBe(tam.cicloPrevio === 'si' ? 4 : 3)
-        if (r.score !== null) expect(r.score).toBeLessThanOrEqual(r.techo + 1e-9)
-        return true
-      },
-    ), { numRuns: 300 })
+  it('cambiar «no aplica» por cualquier etapa nunca baja la cobertura', () => {
+    fc.assert(fc.property(diagnosticoArb, tamizajeArb, fc.constantFrom(0, 1, 2, 3, 4) as fc.Arbitrary<Etapa>, (d, t, e) => {
+      const antes = evaluar(RSE_EXPRESS, d, 'servicios', t).cobertura
+      const d2: Diagnostico = {
+        ...d,
+        respuestas: Object.fromEntries(Object.entries(d.respuestas).map(([k, r]) => [k, r.etapa === 'NA' ? { ...r, etapa: e } : r])),
+      }
+      expect(evaluar(RSE_EXPRESS, d2, 'servicios', t).cobertura).toBeGreaterThanOrEqual(antes - 1e-9)
+    }))
   })
 
-  it('la cobertura siempre está en [0, 1]', () => {
-    fc.assert(fc.property(
-      respuestasArb(FORMATO_01), fc.constantFrom(...SECTORES), tamizajeArb,
-      (respuestas, sector, tam) => {
-        const { cobertura } = evaluarFormato(FORMATO_01, respuestas, sector, tam)
-        expect(cobertura).toBeGreaterThanOrEqual(0)
-        expect(cobertura).toBeLessThanOrEqual(1 + 1e-9)
-        return true
-      },
-    ), { numRuns: 300 })
+  it('el progreso nunca supera el total y excluye Consumidores cuando no aplica', () => {
+    fc.assert(fc.property(diagnosticoArb, tamizajeArb, (d, t) => {
+      const p = progreso(RSE_EXPRESS, d, t)
+      expect(p.hechas).toBeLessThanOrEqual(p.total)
+      expect(p.total).toBe(t.clientes === 'empresas' || t.clientes === 'publicas' ? 18 : 21)
+    }))
   })
 
-  it('subir una respuesta nunca baja el puntaje (monotonía)', () => {
-    const ids = idsDe(FORMATO_01)
-    fc.assert(fc.property(
-      respuestasArb(FORMATO_01), fc.nat({ max: ids.length - 1 }),
-      fc.constantFrom(...SECTORES), tamizajeArb,
-      (respuestas, idx, sector, tam) => {
-        const id = ids[idx]
-        const actual = respuestas[id]
-        // Solo comparamos entre valores numéricos: pasar de N/A a un número
-        // cambia el denominador, y ahí la monotonía no aplica por diseño.
-        if (actual === 'NA' || actual === 4) return true
-        const antes = evaluarFormato(FORMATO_01, respuestas, sector, tam)
-        const despues = evaluarFormato(
-          FORMATO_01, { ...respuestas, [id]: (actual + 1) as Valor }, sector, tam,
-        )
-        if (antes.score === null || despues.score === null) return true
-        expect(despues.score).toBeGreaterThanOrEqual(antes.score - 1e-9)
-        return true
-      },
-    ), { numRuns: 300 })
-  })
-
-  it('el progreso nunca reporta más contestadas que el total', () => {
-    fc.assert(fc.property(
-      respuestasArb(FORMATO_02), tamizajeArb,
-      (respuestas, tam) => {
-        const p = progreso(FORMATO_02, respuestas, tam)
-        expect(p.hechas).toBeLessThanOrEqual(p.total)
-        return true
-      },
-    ), { numRuns: 300 })
+  it('la matriz propone como máximo 5, sin repetir, y nunca algo en etapa 4 o no aplica', () => {
+    fc.assert(fc.property(diagnosticoArb, tamizajeArb, fc.constantFrom(...SECTORES), (d, t, s) => {
+      const ops = oportunidades(RSE_EXPRESS, d, s, t)
+      expect(ops.length).toBeLessThanOrEqual(5)
+      expect(new Set(ops.map((o) => o.clave)).size).toBe(ops.length)
+      for (const o of ops) {
+        const r = d.respuestas[o.clave]
+        expect(r.etapa).not.toBe('NA')
+        expect(r.etapa).not.toBe(4)
+        expect(sumaPrioridad({ importancia: 1, viabilidad: 1, potencial: 1, interes: o.interesSugerido ?? 1 })).toBeGreaterThanOrEqual(4)
+      }
+    }))
   })
 })
