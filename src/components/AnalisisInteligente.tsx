@@ -129,7 +129,7 @@ export function AnalisisInteligente({ estado, onReintentar }: Props) {
           <span className="rse-ia-spinner" aria-hidden="true" />
           <div>
             <strong>Analizando resultados…</strong>{' '}
-            Puede tardar hasta un minuto. Mientras tanto puede seguir revisando su mapa o descargar el informe.
+            Puede tardar hasta un minuto y medio. Mientras tanto puede seguir revisando su mapa o descargar el informe.
           </div>
         </div>
       )}
