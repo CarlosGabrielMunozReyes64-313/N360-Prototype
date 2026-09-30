@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf'
-import type { Diagnostico, Perfil, Priorizacion, Tamizaje } from '../types'
+import type { AccionIA, AnalisisIAGuardado, Diagnostico, Perfil, Priorizacion, Tamizaje } from '../types'
 import { RSE_EXPRESS, SECTORES } from '../data/rseExpress'
 import { CATEGORIAS, etiquetaEtapa } from '../data/escala'
 import {
@@ -13,14 +13,21 @@ import {
  * Informe para la empresa: «Mapa de prácticas actuales, fortalezas y
  * oportunidades» (sección 6.3) con la matriz de priorización (sección 7).
  * Como en pantalla, no lleva puntaje de cumplimiento.
+ *
+ * Si hay análisis inteligente (Gemini), se agrega al final como una sección
+ * aparte; si no lo hay (no cargó, falló o el servidor no tiene clave), el
+ * informe sale completo sin ella.
  */
 export interface DatosInforme {
   perfil: Perfil
   tamizaje: Tamizaje
   diagnostico: Diagnostico
   priorizacion: Priorizacion
+  analisisIA?: AnalisisIAGuardado | null
   fecha?: Date
 }
+
+const PRIORIDAD_IA = { alta: 'Prioridad alta', media: 'Prioridad media', baja: 'Prioridad baja' } as const
 
 const VERDE: [number, number, number] = [2, 64, 41]
 const TEXTO: [number, number, number] = [26, 46, 36]
@@ -72,14 +79,27 @@ export function construirDoc(d: DatosInforme): jsPDF {
     }
     y += o.despues ?? 1.5
   }
-  const titulo = (texto: string) => {
-    saltoSiHaceFalta(14)
+  // Cada título reserva espacio para sí mismo (~14 mm) y para el primer
+  // bloque que lo sigue: así nunca queda solo al pie de una página. Por
+  // defecto, dos líneas de texto; las secciones con bloques más altos
+  // (materias, oportunidades, recomendaciones) piden más.
+  const titulo = (texto: string, reserva = 26) => {
+    saltoSiHaceFalta(reserva)
     y += 3
     parrafo(texto, { size: 13, bold: true, color: VERDE, despues: 1 })
     doc.setDrawColor(...VERDE)
     doc.setLineWidth(0.3)
     doc.line(MARGEN, y, MARGEN + ANCHO, y)
     y += 4
+  }
+  const subtitulo = (texto: string) => {
+    saltoSiHaceFalta(20)
+    y += 1.5
+    parrafo(texto, { size: 11, bold: true, color: VERDE, despues: 1.2 })
+  }
+  const vinetas = (items: string[], numeradas = false) => {
+    items.forEach((t, i) => parrafo(`${numeradas ? `${i + 1}.` : '-'} ${t}`, { size: 9.5, sangria: 2, despues: 1 }))
+    y += 1
   }
 
   // Encabezado
@@ -118,7 +138,7 @@ export function construirDoc(d: DatosInforme): jsPDF {
   )
 
   // Mapa por materia
-  titulo('Mapa de prácticas por materia')
+  titulo('Mapa de prácticas por materia', 32)
   for (const m of mapa) {
     saltoSiHaceFalta(16)
     const cat = CATEGORIAS[m.categoria]
@@ -137,8 +157,27 @@ export function construirDoc(d: DatosInforme): jsPDF {
     y += 1
   }
 
+  // Fortalezas y temas por empezar: los mismos que cuenta el resumen de
+  // arriba y que muestra la pantalla (categorías del motor).
+  const fortalezas = practicas.filter((p) => p.categoria === 'fortaleza')
+  if (fortalezas.length) {
+    titulo('Sus fortalezas')
+    vinetas(fortalezas.map((f) => {
+      const materia = RSE_EXPRESS.materias.find((m) => m.preguntas.includes(f.pregunta))?.nombre ?? ''
+      return `${materia}: ${f.haceHoy || etiquetaEtapa(f.respuesta?.etapa)}`
+    }))
+  }
+  const porEmpezar = practicas.filter((p) => p.categoria === 'oportunidad')
+  if (porEmpezar.length) {
+    titulo('Temas por empezar o formalizar')
+    vinetas(porEmpezar.map((o) => {
+      const materia = RSE_EXPRESS.materias.find((m) => m.preguntas.includes(o.pregunta))?.nombre ?? ''
+      return `${materia} (${o.pregunta.id}, ${etiquetaEtapa(o.respuesta?.etapa, true).toLowerCase()}): ${o.pregunta.texto}`
+    }))
+  }
+
   // Matriz de priorización
-  titulo('Matriz de priorización')
+  titulo('Matriz de priorización', 44)
   const ops = oportunidades(RSE_EXPRESS, diagnostico, perfil.sector, tamizaje)
   if (ops.length === 0) {
     parrafo('No hay temas en etapa inicial. En la conversación con NEXUS pueden elegir uno para ampliar.', { size: 9.5 })
@@ -168,6 +207,56 @@ export function construirDoc(d: DatosInforme): jsPDF {
   if (diagnostico.comentarioFinal.trim()) {
     titulo('Otras prácticas que nos contó')
     parrafo(diagnostico.comentarioFinal.trim(), { size: 9.5 })
+  }
+
+  // Análisis inteligente (capa 2): interpretación con IA de lo anterior.
+  const ia = d.analisisIA?.analisis
+  if (ia) {
+    const generado = d.analisisIA?.generadoEn ? new Date(d.analisisIA.generadoEn) : null
+    titulo('Análisis inteligente')
+    parrafo(
+      'Interpretación generada con inteligencia artificial (Gemini) a partir de los resultados de este informe'
+      + (generado && !Number.isNaN(generado.getTime())
+        ? ` el ${generado.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}`
+        : '')
+      + '. No modifica el mapa de prácticas ni la matriz de priorización y puede contener imprecisiones: '
+      + 'revísela con el equipo NEXUS antes de tomar decisiones.',
+      { size: 8.5, color: GRIS, despues: 2 },
+    )
+    subtitulo('Resumen ejecutivo')
+    parrafo(ia.resumen, { size: 9.5, despues: 2 })
+    if (ia.fortalezas.length) { subtitulo('Fortalezas'); vinetas(ia.fortalezas) }
+    if (ia.areasOportunidad.length) { subtitulo('Áreas de oportunidad'); vinetas(ia.areasOportunidad) }
+    if (ia.prioridades.length) { subtitulo('Prioridades'); vinetas(ia.prioridades, true) }
+
+    if (ia.recomendaciones.length) {
+      titulo('Recomendaciones', 36)
+      ia.recomendaciones.forEach((r, i) => {
+        const materia = RSE_EXPRESS.materias.find((m) => m.numero === r.materia)
+        saltoSiHaceFalta(20)
+        parrafo(`${i + 1}. ${r.titulo}`, { size: 10, bold: true, despues: 0.4 })
+        parrafo(`${PRIORIDAD_IA[r.prioridad]} · ${materia ? `${materia.numero} ${materia.nombre}` : 'Transversal'}`,
+          { size: 8.5, color: GRIS, sangria: 4, despues: 0.6 })
+        parrafo(r.descripcion, { size: 9.5, sangria: 4, despues: 0.6 })
+        parrafo(`Por qué: ${r.justificacion}`, { size: 9, sangria: 4, color: GRIS, despues: 2.5 })
+      })
+    }
+    const acciones = (nombre: string, lista: AccionIA[]) => {
+      if (!lista.length) return
+      titulo(nombre, 30)
+      for (const a of lista) {
+        saltoSiHaceFalta(14)
+        parrafo(`- ${a.accion}`, { size: 9.5, bold: true, despues: 0.4 })
+        parrafo(`Objetivo: ${a.objetivo}`, { size: 9, sangria: 4, despues: 0.4 })
+        parrafo(`Horizonte: ${a.horizonte} · ${PRIORIDAD_IA[a.prioridad]}`, { size: 8.5, sangria: 4, color: GRIS, despues: 2 })
+      }
+    }
+    acciones('Acciones a corto plazo', ia.accionesCortoPlazo)
+    acciones('Acciones a mediano plazo', ia.accionesMedianoPlazo)
+    if (ia.conclusion) {
+      titulo('Conclusión')
+      parrafo(ia.conclusion, { size: 9.5 })
+    }
   }
 
   y += 4

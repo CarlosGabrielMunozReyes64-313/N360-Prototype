@@ -233,3 +233,48 @@ export interface Alerta {
   titulo: string
   detalle: string
 }
+
+/* ------------------------------------------------ análisis inteligente (IA) */
+
+/**
+ * Interpretación de los resultados generada con Gemini en el backend (capa
+ * 2). No trae puntajes: los niveles, categorías y prioridades siguen siendo
+ * los que calcula engine/scoring.ts (capa 1), y la IA no puede cambiarlos.
+ */
+export type PrioridadIA = 'alta' | 'media' | 'baja'
+
+export interface RecomendacionIA {
+  titulo: string
+  descripcion: string
+  prioridad: PrioridadIA
+  justificacion: string
+  /** Número de la materia ('01'…'07') o 'general' si es transversal. */
+  materia: string
+}
+
+export interface AccionIA {
+  accion: string
+  objetivo: string
+  horizonte: string
+  prioridad: PrioridadIA
+}
+
+export interface AnalisisIA {
+  resumen: string
+  fortalezas: string[]
+  areasOportunidad: string[]
+  prioridades: string[]
+  recomendaciones: RecomendacionIA[]
+  accionesCortoPlazo: AccionIA[]
+  accionesMedianoPlazo: AccionIA[]
+  conclusion: string
+}
+
+export interface AnalisisIAGuardado {
+  analisis: AnalisisIA
+  /** ISO 8601. */
+  generadoEn: string
+  modelo: string
+  /** true si el backend devolvió un análisis ya guardado (sin llamar a Gemini). */
+  reutilizado: boolean
+}

@@ -11,6 +11,7 @@ import {
 } from './almacen'
 import type { HistorialEntrada } from './almacen'
 import { PerfilPaso } from './components/PerfilPaso'
+import { perfilNitValido } from './data/nit'
 import { TamizajePaso } from './components/TamizajePaso'
 import { MenuFormatos } from './components/MenuFormatos'
 import { Cuestionario } from './components/Cuestionario'
@@ -33,8 +34,11 @@ const PERFIL_VACIO: Perfil = {
   municipio: '', departamento: '', extranjera: false,
 }
 
+/** Un perfil sin DV válido no se puede guardar en el servidor: se trata
+ * como incompleto para que la persona vuelva al paso «Perfil» a corregirlo
+ * (sus respuestas del autodiagnóstico se conservan en el navegador). */
 function perfilCompleto(p: Perfil): boolean {
-  return Boolean(p.razonSocial && p.nit && p.sector && p.municipio)
+  return Boolean(p.razonSocial && p.sector && p.municipio) && perfilNitValido(p)
 }
 
 function pasoInicial(p: Perfil, t: Tamizaje): number {
@@ -277,6 +281,7 @@ export default function App({ usuario, onLogout }: Props) {
 
         {hidratado && paso === 3 && (
           <Resultados
+            token={token}
             perfil={perfil} tamizaje={tamizaje} diagnostico={diag}
             priorizacion={prior} onPriorizacion={setPrior}
             onBack={() => ir(2)}

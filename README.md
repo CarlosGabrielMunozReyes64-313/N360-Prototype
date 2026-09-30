@@ -2,7 +2,8 @@
 
 Front-end del flujo: perfil de empresa → tamizaje «Conozcamos su empresa» →
 Autodiagnóstico RSE Express (7 materias de la ISO 26000, 21 preguntas
-abiertas) → mapa de prácticas y matriz de priorización → informe en PDF.
+abiertas) → mapa de prácticas, matriz de priorización y análisis inteligente
+(Gemini, vía backend) → informe en PDF.
 
 El instrumento es el Anexo 1 del *Protocolo de Validación NEXUS RSE Express +
 RSE por Retos* (v2, septiembre de 2026). Reemplaza a los formatos anteriores
@@ -15,8 +16,13 @@ npm install
 npm run dev      # desarrollo
 npm run build    # compila TypeScript y empaqueta
 npm run test     # pruebas (motor, almacenamiento, API, gráficas, exportaciones)
-npx vite-node pruebas/pdf.ts   # genera un informe de ejemplo en /tmp/informe.pdf
+npx vite-node pruebas/pdf.ts   # informe de ejemplo en /tmp/informe.pdf (con análisis IA)
+SIN_IA=1 npx vite-node pruebas/pdf.ts   # el mismo informe sin la sección de IA
 ```
+
+El único `.env` del front es `VITE_API_URL` (la URL del backend). La clave de
+Gemini **no** va aquí: todo lo que empieza por `VITE_` termina en el
+navegador. Vive solo en el `.env` del backend.
 
 ## Estructura
 
@@ -31,11 +37,18 @@ src/
                            matriz de priorización y alertas informativas
   almacen.ts               copia local (localStorage v2) y migración de datos viejos
   auth/empresaApi.ts       /empresa/mio y /empresa/mio/diagnosticos/rse_express/…
-  export/pdf.ts            informe para la empresa (mapa + matriz + alertas)
+  auth/analisisIaApi.ts    análisis IA: arma los resultados del motor y llama a
+                           POST …/rse_express/analisis-ia
+  hooks/useAnalisisIA.ts   estado del análisis (cargando, listo, error, reintentar)
+  export/pdf.ts            informe para la empresa (mapa + fortalezas + matriz +
+                           alertas + análisis inteligente si lo hay)
   components/TamizajePaso  tamizaje nuevo
   components/MenuFormatos  portada del autodiagnóstico con avance por materia
   components/Cuestionario  preguntas abiertas, ejemplos, «algo diferente», etapa
   components/Resultados    mapa de prácticas, fortalezas, matriz de priorización
+  components/AnalisisInteligente  sección «Análisis inteligente» de Resultados
+  data/politicaDatos.ts    Política de Tratamiento de Datos Personales (texto y versión)
+  components/PoliticaDatos diálogo para leer la política desde el registro
   components/EmpresasTab   ficha de empresa del admin: respuestas y clasificación
 pruebas/                   vitest (+ fast-check para las propiedades del motor)
 ```
@@ -71,6 +84,59 @@ salvo que la etapa sea «Aún no lo hemos abordado» o «No aplica».
 - **Alertas informativas, no sanciones:** Ley 2173 si el tamaño es mediana o
   «no estoy seguro»; SG-SST si 03b está en 0–1 o N/A; Ley 1581 si 06b está en
   0–1 o N/A; comunidades étnicas si T5 las marca.
+
+## Análisis inteligente (Gemini)
+
+Al abrir **Resultados**, el front toma lo que el motor ya calculó
+(`mapaPracticas`, `evaluar`, `oportunidades`, `alertasInformativas`) y lo
+manda al backend (`payloadResultadosIA` en `src/auth/analisisIaApi.ts`). El
+backend se lo pasa a Gemini, valida la respuesta y la guarda. La IA solo
+interpreta: no cambia el mapa, las categorías ni el orden de la matriz.
+
+- **Qué se envía:** niveles en palabras (etapas y categorías), lo que la
+  empresa contó (respuesta abierta completa, hasta 1.500 caracteres; en
+  pantalla sigue saliendo el resumen), lo que quiere fortalecer (completo),
+  las oportunidades en orden y las alertas. **No** se envían la razón social, el NIT ni la lectura numérica
+  interna 0–4 (a la empresa no se le muestra un puntaje).
+- **En pantalla:** sección «Análisis inteligente» al final (resumen
+  ejecutivo, fortalezas, áreas de oportunidad, prioridades, recomendaciones,
+  acciones a corto y mediano plazo, conclusión), con los mismos estilos del
+  mapa y la matriz. Mientras se genera: «Analizando resultados…».
+- **Sin llamadas de más:** si los resultados no cambiaron, el backend
+  devuelve el análisis guardado (recargar la página no llama a Gemini), y dos
+  pedidos iguales al tiempo comparten una sola petición.
+- **Si falla** (sin red, Gemini caído, sin clave en el servidor, tope por
+  hora): un aviso amable, «Reintentar» cuando tiene sentido, y todo lo demás
+  sigue funcionando.
+- **PDF:** «Descargar informe (PDF)» nunca se bloquea. Con el análisis listo,
+  el informe agrega «Análisis inteligente», «Recomendaciones», «Acciones a
+  corto plazo», «Acciones a mediano plazo» y «Conclusión» después de la
+  matriz y las alertas; sin él, sale completo como antes. El informe también
+  trae ahora «Sus fortalezas» y «Temas por empezar o formalizar» (del motor,
+  igual que en pantalla). Ningún título queda solo al pie de una página: cada
+  uno reserva espacio para el primer bloque que lo sigue (lo prueba
+  `pruebas/analisis-ia.test.tsx` con 61 largos de contenido distintos).
+
+Configuración de la clave, migración y detalles: README del backend,
+sección «Análisis inteligente con Gemini (010)». Pruebas:
+`pruebas/analisis-ia.test.tsx` (resultados altos, bajos y mixtos, carga,
+error, reintento, sin clave, sin sesión, PDF con y sin IA).
+
+## Política de tratamiento de datos en el registro
+
+Para crear una cuenta hay que marcar la casilla de autorización (Ley 1581 de
+2012): «He leído la Política de Tratamiento de Datos Personales y autorizo…».
+El enlace abre la política en un diálogo; leerla no marca la casilla. El
+registro envía `acepta_politica_datos: true` y la versión leída, y el backend
+guarda la prueba (ver README del backend, sección 011).
+
+El texto vive en `src/data/politicaDatos.ts` y cubre el contenido mínimo del
+Decreto 1377 de 2013: responsable, datos y finalidades, el envío a Google
+(Gemini) para el análisis inteligente, derechos, cómo ejercerlos y plazos, y
+vigencia. **Antes de producción:** completar `RESPONSABLE` con los datos
+legales reales (hoy se ven textos entre corchetes) y hacerlo revisar por el
+área jurídica. Si el texto cambia de fondo, subir `version` aquí y en el
+backend a la vez.
 
 ## Cuentas que venían del instrumento anterior
 

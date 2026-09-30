@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { POLITICA_DATOS } from '../data/politicaDatos'
+import { PoliticaDatos } from './PoliticaDatos'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASS_MIN = 8
@@ -19,11 +21,13 @@ export function Register({ onIrALogin, onSuccess }: Props) {
   const [confirmar, setConfirmar] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [tocado, setTocado] = useState(false)
+  const [acepta, setAcepta] = useState(false)
+  const [verPolitica, setVerPolitica] = useState(false)
 
   const emailValido = EMAIL_RE.test(email)
   const passwordValida = password.length >= PASS_MIN
   const coinciden = password.length > 0 && password === confirmar
-  const listo = nombre.trim().length > 1 && emailValido && passwordValida && coinciden
+  const listo = nombre.trim().length > 1 && emailValido && passwordValida && coinciden && acepta
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,6 +40,8 @@ export function Register({ onIrALogin, onSuccess }: Props) {
         email: email.trim().toLowerCase(),
         password,
         rol: 'empresa',
+        acepta_politica_datos: true,
+        politica_datos_version: POLITICA_DATOS.version,
       })
       onSuccess?.()
     } catch {
@@ -117,6 +123,29 @@ export function Register({ onIrALogin, onSuccess }: Props) {
             )}
           </div>
 
+          <label className="auth-consentimiento">
+            <input
+              type="checkbox"
+              checked={acepta}
+              onChange={(e) => { setAcepta(e.target.checked); limpiarError() }}
+              aria-describedby="reg-consentimiento-ayuda"
+            />
+            <span>
+              He leído la{' '}
+              <button type="button" className="auth-link" onClick={() => setVerPolitica(true)}>
+                Política de Tratamiento de Datos Personales
+              </button>{' '}
+              y autorizo de manera previa, expresa e informada el tratamiento de mis datos conforme a
+              ella, incluido el envío de las respuestas del autodiagnóstico a Google (Gemini) para
+              generar el análisis inteligente.
+            </span>
+          </label>
+          {tocado && !acepta && (
+            <span id="reg-consentimiento-ayuda" className="auth-hint" style={{ color: 'var(--nx-alert)' }}>
+              Para crear la cuenta debes autorizar el tratamiento de tus datos.
+            </span>
+          )}
+
           <div className="auth-actions">
             <button type="submit" className="btn" disabled={enviando}>
               {enviando ? 'Creando cuenta…' : 'Crear cuenta'}
@@ -128,6 +157,7 @@ export function Register({ onIrALogin, onSuccess }: Props) {
           </div>
         </form>
       </div>
+      {verPolitica && <PoliticaDatos onCerrar={() => setVerPolitica(false)} />}
     </div>
   )
 }

@@ -8,9 +8,14 @@ import {
   sumaPrioridad,
 } from '../engine/scoring'
 import { Radar } from './Radar'
+import { AnalisisInteligente } from './AnalisisInteligente'
 import { generarInforme } from '../export/pdf'
+import { payloadResultadosIA } from '../auth/analisisIaApi'
+import { useAnalisisIA } from '../hooks/useAnalisisIA'
 
 interface Props {
+  /** Sesión para pedir el análisis inteligente al backend (null = sin él). */
+  token?: string | null
   perfil: Perfil
   tamizaje: Tamizaje
   diagnostico: Diagnostico
@@ -32,13 +37,16 @@ const PUNTAJES: { v: Puntaje; t: string }[] = [{ v: 1, t: 'Bajo' }, { v: 2, t: '
  * prácticas actuales, fortalezas y oportunidades, y la matriz de
  * priorización. No se muestra un puntaje de cumplimiento.
  */
-export function Resultados({ perfil, tamizaje, diagnostico, priorizacion, onPriorizacion, onBack }: Props) {
+export function Resultados({ token = null, perfil, tamizaje, diagnostico, priorizacion, onPriorizacion, onBack }: Props) {
   const [generando, setGenerando] = useState(false)
   const mapa = useMemo(() => mapaPracticas(RSE_EXPRESS, diagnostico, perfil.sector, tamizaje), [diagnostico, perfil.sector, tamizaje])
   const res = useMemo(() => evaluar(RSE_EXPRESS, diagnostico, perfil.sector, tamizaje), [diagnostico, perfil.sector, tamizaje])
   const ops = useMemo(() => oportunidades(RSE_EXPRESS, diagnostico, perfil.sector, tamizaje), [diagnostico, perfil.sector, tamizaje])
   const alertas = useMemo(() => alertasInformativas(RSE_EXPRESS, diagnostico, tamizaje), [diagnostico, tamizaje])
   const registradas = practicasRegistradas(RSE_EXPRESS, diagnostico, tamizaje)
+  // Capa 2: la IA interpreta lo que el motor ya calculó (no lo recalcula).
+  const resultadosIA = useMemo(() => payloadResultadosIA(perfil, tamizaje, diagnostico), [perfil, tamizaje, diagnostico])
+  const { estado: estadoIA, reintentar: reintentarIA } = useAnalisisIA(token, resultadosIA)
 
   const practicas = mapa.flatMap((m) => m.aplica ? m.practicas : [])
   const fortalezas = practicas.filter((p) => p.categoria === 'fortaleza')
@@ -61,7 +69,12 @@ export function Resultados({ perfil, tamizaje, diagnostico, priorizacion, onPrio
   const descargar = async () => {
     setGenerando(true)
     try {
-      generarInforme({ perfil, tamizaje, diagnostico, priorizacion })
+      // Con análisis IA si ya está listo; si no (cargando, falló o no hay
+      // clave), el informe sale completo sin esa sección.
+      generarInforme({
+        perfil, tamizaje, diagnostico, priorizacion,
+        analisisIA: estadoIA.tipo === 'listo' ? estadoIA.datos : null,
+      })
     } finally {
       setGenerando(false)
     }
@@ -240,6 +253,8 @@ export function Resultados({ perfil, tamizaje, diagnostico, priorizacion, onPrio
         </>
       )}
 
+      <AnalisisInteligente estado={estadoIA} onReintentar={reintentarIA} />
+
       <details className="method">
         <summary>Cómo se construyó este mapa</summary>
         <div className="method-body">
@@ -249,6 +264,12 @@ export function Resultados({ perfil, tamizaje, diagnostico, priorizacion, onPrio
             organizado», como prácticas en desarrollo; «Aún no lo hemos abordado» y «Estamos
             comenzando», como oportunidades. «No aplica» sale del análisis sin contar como cero, y las
             prácticas propias («Hacemos algo diferente») las revisa el equipo NEXUS.
+          </p>
+          <p>
+            El análisis inteligente lo genera un modelo de inteligencia artificial (Gemini) a partir de
+            estos mismos resultados. No cambia el mapa ni la matriz, y no recibe la razón social ni el
+            NIT de la empresa. Si no está disponible, el resto de los resultados y el informe PDF
+            funcionan igual.
           </p>
           <p>
             Las oportunidades se ordenan dando prioridad a los temas con implicaciones legales en
@@ -261,9 +282,14 @@ export function Resultados({ perfil, tamizaje, diagnostico, priorizacion, onPrio
 
       <div className="nav-footer">
         <button className="btn-ghost" onClick={onBack}>← Volver al autodiagnóstico</button>
-        <button className="btn-dark" onClick={descargar} disabled={generando}>
-          {generando ? 'Generando…' : 'Descargar informe (PDF)'}
-        </button>
+        <div className="rse-descarga">
+          {estadoIA.tipo === 'cargando' && (
+            <span className="hint">El análisis inteligente aún se está generando; si descarga ahora, el informe saldrá sin él.</span>
+          )}
+          <button className="btn btn-dark" onClick={descargar} disabled={generando}>
+            {generando ? 'Generando…' : 'Descargar informe (PDF)'}
+          </button>
+        </div>
       </div>
     </section>
   )

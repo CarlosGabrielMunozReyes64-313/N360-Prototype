@@ -140,10 +140,37 @@
 }
 .rse-alerta p { margin: 4px 0 0; }
 
+/* ------------------------------------------------ análisis inteligente */
+.rse-ia-subtitulo { font-size: 15px; color: var(--nx-dark); margin: 22px 0 8px; }
+.rse-ia-parrafo { font-size: 14px; color: var(--nx-text); max-width: 76ch; margin: 0; line-height: 1.6; }
+.rse-ia-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+.rse-ia-porque { color: var(--nx-muted); }
+.rse-ia-acciones { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.rse-ia-acciones li { border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 13.5px; }
+.rse-ia-acciones p { margin: 4px 0 0; color: var(--nx-text); }
+.rse-ia-accion-cabeza { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; color: var(--nx-dark); }
+.rse-ia-etiqueta { font-weight: 600; }
+.rse-ia-horizonte { font-family: var(--mono); font-size: 12px; color: var(--nx-muted) !important; }
+.rse-ia-conclusion { margin-top: 0; }
+.rse-ia-pie { font-size: 12px; color: var(--nx-muted); margin: 14px 0 0; }
+.rse-ia-cargando { display: flex; gap: 12px; align-items: center; }
+.rse-ia-spinner {
+  width: 18px; height: 18px; flex-shrink: 0; border-radius: 50%;
+  border: 2px solid var(--border-strong); border-top-color: var(--nx-mid);
+  animation: rse-ia-girar 0.9s linear infinite;
+}
+/* Con movimiento reducido, index.css detiene el giro; el texto sigue diciendo que carga. */
+@keyframes rse-ia-girar { to { transform: rotate(360deg); } }
+.rse-ia-error { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.rse-descarga { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.rse-descarga .hint { font-size: 12px; color: var(--nx-muted); max-width: 36ch; text-align: right; }
+
 @media (max-width: 860px) {
   .rse-materia-fila { grid-template-columns: 32px 1fr; }
   .rse-materia-fila .rse-materia-avance, .rse-materia-fila .btn-sm { grid-column: 2; justify-self: start; }
   .rse-mapa-cabeza { grid-template-columns: 1fr; }
   .rse-criterios { grid-template-columns: repeat(2, 1fr); }
   .rse-pregunta { padding: 14px; }
+  .rse-ia-columnas { grid-template-columns: 1fr; }
+  .rse-descarga .hint { text-align: left; }
 }

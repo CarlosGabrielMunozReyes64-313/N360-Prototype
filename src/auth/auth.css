@@ -93,5 +93,45 @@
   font-size: 13px;
 }
 
+/* ------------------------------------------ autorización de datos (Ley 1581) */
+.auth-consentimiento {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 12.5px; line-height: 1.5; color: var(--nx-text);
+  margin: 4px 0 6px; cursor: pointer;
+}
+.auth-consentimiento input {
+  width: 16px; height: 16px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--nx-mid);
+}
+.auth-link {
+  border: 0; background: none; padding: 0; font: inherit; font-weight: 600;
+  color: var(--nx-mid); text-decoration: underline; cursor: pointer;
+}
+.auth-link:focus-visible { outline: 2px solid var(--nx-mid); outline-offset: 2px; }
+
+.politica-fondo {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(2, 64, 41, 0.45);
+  display: grid; place-items: center; padding: 20px;
+}
+.politica-caja {
+  width: min(640px, 100%); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: #fff; border-radius: 12px; box-shadow: var(--shadow);
+}
+.politica-cabeza { padding: 20px 24px 12px; border-bottom: 1px solid var(--border); }
+.politica-titulo { font-size: 18px; color: var(--nx-dark); margin: 0; }
+.politica-version { font-family: var(--mono); font-size: 11px; color: var(--nx-muted); margin: 6px 0 0; }
+.politica-cuerpo {
+  padding: 4px 24px 16px; overflow-y: auto;
+  font-size: 13.5px; line-height: 1.6; color: var(--nx-text);
+}
+.politica-cuerpo h3 { font-size: 14px; color: var(--nx-dark); margin: 18px 0 6px; }
+.politica-cuerpo p { margin: 0 0 8px; }
+.politica-cuerpo ul { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 4px; }
+.politica-pie {
+  padding: 12px 24px 18px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end;
+}
+
 /* La barra de sesión flotante se reemplazó por el top bar integrado en
    App.tsx (ver .header-cuenta / .sesion-tag en src/topbar.css). */

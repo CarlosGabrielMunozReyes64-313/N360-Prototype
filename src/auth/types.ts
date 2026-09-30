@@ -26,6 +26,11 @@ export interface RegistroPayload {
   password: string
   /** El autorregistro siempre crea cuentas 'empresa'; 'admin' se aprovisiona aparte. */
   rol: Extract<Rol, 'empresa'>
+  /** Autorización previa, expresa e informada (Ley 1581 de 2012). Sin ella
+   * el backend no crea la cuenta. */
+  acepta_politica_datos: true
+  /** Versión de la política que la persona leyó (data/politicaDatos.ts). */
+  politica_datos_version: string
 }
 
 export interface LoginPayload {
@@ -52,6 +57,14 @@ export type AuthErrorCode =
   /** El estado actual del recurso impide la acción (cuenta ya eliminada, correo ya tomado). */
   | 'CONFLICTO'
   | 'RED'
+  /** Análisis inteligente: Gemini falló o no respondió a tiempo (reintentable). */
+  | 'IA_NO_DISPONIBLE'
+  /** Análisis inteligente: el backend no tiene GEMINI_API_KEY. */
+  | 'IA_NO_CONFIGURADA'
+  /** Análisis inteligente: se alcanzó el tope de análisis nuevos por hora. */
+  | 'IA_LIMITE'
+  /** Análisis inteligente: aún no hay empresa o autodiagnóstico guardados en el servidor. */
+  | 'SIN_DIAGNOSTICO'
   | 'DESCONOCIDO'
 
 export class AuthError extends Error {

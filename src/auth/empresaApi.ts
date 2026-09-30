@@ -187,7 +187,8 @@ async function parseError(res: Response): Promise<AuthError> {
   return new AuthError(codigo as AuthError['code'], mensaje)
 }
 
-async function llamar<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
+/** fetch autenticado con el formato de error {codigo, mensaje} del backend. */
+export async function llamar<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
   let res: Response
   try {
     res = await fetch(`${API_URL}${path}`, {

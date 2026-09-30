@@ -1,6 +1,7 @@
 import type { Perfil, SectorId } from '../types'
 import { SECTORES } from '../data/rseExpress'
 import { DEPARTAMENTOS_COLOMBIA, municipiosDe } from '../data/colombia'
+import { calcularDV, perfilNitValido } from '../data/nit'
 
 interface Props {
   perfil: Perfil
@@ -13,24 +14,16 @@ interface Props {
   ocultarNota?: boolean
 }
 
-/** Dígito de verificación del NIT: módulo 11 de la DIAN. */
-export function calcularDV(nit: string): string | null {
-  const limpio = nit.replace(/\D/g, '')
-  if (limpio.length < 5 || limpio.length > 15) return null
-  const pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
-  let suma = 0
-  const rev = limpio.split('').reverse()
-  for (let i = 0; i < rev.length; i++) suma += Number(rev[i]) * pesos[i]
-  const r = suma % 11
-  return String(r > 1 ? 11 - r : r)
-}
-
 export function PerfilPaso({ perfil, onChange, onNext, textoBoton, ocultarNota }: Props) {
   const set = <K extends keyof Perfil>(k: K, v: Perfil[K]) => onChange({ ...perfil, [k]: v })
 
   const dvEsperado = calcularDV(perfil.nit)
   const dvMal = perfil.dv !== '' && dvEsperado !== null && perfil.dv !== dvEsperado
-  const listo = Boolean(perfil.razonSocial && perfil.nit && perfil.sector && perfil.municipio) && !dvMal
+  // Mismas reglas que la base (chk_empresa_dv): el DV es obligatorio y debe
+  // corresponder al NIT. Sin eso la empresa no se guarda en el servidor.
+  const dvFalta = perfil.dv === '' && dvEsperado !== null
+  const nitCorto = perfil.nit !== '' && dvEsperado === null
+  const listo = Boolean(perfil.razonSocial && perfil.sector && perfil.municipio) && perfilNitValido(perfil)
 
   return (
     <section className="card">
@@ -60,6 +53,12 @@ export function PerfilPaso({ perfil, onChange, onNext, textoBoton, ocultarNota }
             <span className="hint" style={{ color: 'var(--nx-alert)' }}>
               El dígito no corresponde al NIT. Para {perfil.nit} debería ser {dvEsperado}.
             </span>
+          )}
+          {dvFalta && (
+            <span className="hint">Escriba el dígito de verificación (DV) que aparece en el RUT.</span>
+          )}
+          {nitCorto && (
+            <span className="hint" style={{ color: 'var(--nx-alert)' }}>El NIT debe tener al menos 5 dígitos.</span>
           )}
         </div>
 
