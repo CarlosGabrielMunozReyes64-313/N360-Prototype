@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import type { Diagnostico, Perfil, Priorizacion, RespuestaPregunta, Tamizaje } from './types'
 import type { Usuario } from './auth/types'
 import { AuthError } from './auth/types'
@@ -24,10 +24,17 @@ import {
   payloadEmpresa, perfilDesdeApi, priorizacionDesdeApi, tamizajeDesdeApi,
 } from './auth/empresaApi'
 import { useGuardadoDiferido } from './hooks/useGuardadoDiferido'
+import type { DatosPrueba } from './dev/datosPrueba'
 import './topbar.css'
 import './rse.css'
 
 const PASOS = ['Perfil', 'Tamizaje', 'Autodiagnóstico', 'Resultados']
+
+// Panel «Datos de prueba»: solo con `npm run dev` o con VITE_DATOS_PRUEBA=true.
+// En un build normal esta condición es false y el panel ni siquiera se empaqueta.
+const PanelPrueba = import.meta.env.DEV || import.meta.env.VITE_DATOS_PRUEBA === 'true'
+  ? lazy(() => import('./dev/PanelPrueba'))
+  : null
 
 const PERFIL_VACIO: Perfil = {
   razonSocial: '', nit: '', dv: '', sector: '',
@@ -175,6 +182,25 @@ export default function App({ usuario, onLogout }: Props) {
     if (i <= paso || (i === paso + 1 && puedeAvanzar(paso))) ir(i)
   }
 
+  /** Panel de pruebas: primero guarda en el backend (empresa y luego
+   * diagnóstico, en orden) y después actualiza la pantalla. Así el guardado
+   * diferido no compite con estas escrituras y, al abrir Resultados, el
+   * análisis inteligente ya encuentra el diagnóstico guardado. */
+  const llenarConDatosPrueba = async (datos: DatosPrueba, verResultados: boolean) => {
+    const completo = progreso(RSE_EXPRESS, datos.diagnostico, datos.tamizaje).completo
+    if (token) {
+      await guardarEmpresa(token, payloadEmpresa(datos.perfil, datos.tamizaje))
+      await guardarDiagnostico(token, payloadDiagnostico(datos.diagnostico, PRIORIZACION_VACIA, completo))
+    }
+    setPerfil(datos.perfil)
+    setTamizaje(datos.tamizaje)
+    setDiag(datos.diagnostico)
+    setPrior(PRIORIZACION_VACIA)
+    setErrorEmpresa(null)
+    setAvisoActualizacion(false)
+    ir(verResultados ? 3 : 2)
+  }
+
   const guardarEdicion = (p: Perfil, t: Tamizaje) => {
     const entrada: HistorialEntrada = { fecha: new Date().toISOString(), perfil, tamizaje }
     agregarAlHistorial(id, entrada)
@@ -288,6 +314,12 @@ export default function App({ usuario, onLogout }: Props) {
           />
         )}
       </main>
+
+      {PanelPrueba && (
+        <Suspense fallback={null}>
+          <PanelPrueba perfilActual={perfil} deshabilitado={!hidratado} onLlenar={llenarConDatosPrueba} />
+        </Suspense>
+      )}
 
       <footer className="app-footer">
         Autodiagnóstico, no auditoría: no verifica cumplimiento legal ni constituye concepto
