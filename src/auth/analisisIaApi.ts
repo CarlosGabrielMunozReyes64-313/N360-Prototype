@@ -178,7 +178,7 @@ export function payloadResultadosIA(
             pregunta: recortar(pr.pregunta.texto, 400),
             etapa: etapaDe(pr),
             categoria: pr.categoria,
-            // Respuesta abierta + ejemplos + «algo diferente», completos.
+            // #####Respuesta abierta + ejemplos + «algo diferente», completos.
             hace_hoy: haceHoy(pr.respuesta, MAX_RESPUESTA_IA),
           }))
         : [],
