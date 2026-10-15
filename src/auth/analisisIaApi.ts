@@ -120,7 +120,7 @@ export interface AnalisisIAApi {
 
 /* --------------------------------------------------------- payload */
 
-/** Tope por respuesta abierta. La pantalla y el PDF muestran un resumen de
+/** ##### Tope por respuesta abierta. La pantalla y el PDF muestran un resumen de
  * ~240 caracteres, pero Gemini necesita el detalle para fundamentar sus
  * recomendaciones. */
 export const MAX_RESPUESTA_IA = 1500;
