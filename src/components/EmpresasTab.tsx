@@ -37,6 +37,9 @@ import type { DatosInforme } from "../export/pdf";
  *
  * Desde la lista y desde la ficha se puede descargar el autodiagnóstico en
  * PDF: es el mismo informe que la empresa descarga en sus resultados.
+ *
+ * «Descargar registro de prospectos» baja el Excel del Entregable 3 con todas
+ * las empresas de la lista, hayan respondido o no (ver export/registroProspectos).
  */
 const TOTAL_PREGUNTAS = RSE_EXPRESS.materias.reduce(
   (n, m) => n + m.preguntas.length,
@@ -570,6 +573,7 @@ export function EmpresasTab({ token }: { token: string }) {
   const [busqueda, setBusqueda] = useState("");
   const [descargandoId, setDescargandoId] = useState<string | null>(null);
   const [errorDescarga, setErrorDescarga] = useState<string | null>(null);
+  const [generandoRegistro, setGenerandoRegistro] = useState(false);
   // Se guarda el id y no el objeto: al recargar la lista, la ficha abierta
   // muestra los datos nuevos y no una copia vieja.
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
@@ -588,6 +592,28 @@ export function EmpresasTab({ token }: { token: string }) {
   };
 
   useEffect(cargar, [token]);
+
+  // Pide la lista otra vez para que el Excel salga con los datos del momento
+  // (todas las empresas, sin el filtro del buscador).
+  const descargarRegistroProspectos = async () => {
+    setGenerandoRegistro(true);
+    setErrorDescarga(null);
+    try {
+      const actuales = await adminApi.listarEmpresasDetalle(token);
+      setEmpresas(actuales);
+      const { descargarRegistro } =
+        await import("../export/registroProspectos");
+      await descargarRegistro(actuales);
+    } catch (err) {
+      setErrorDescarga(
+        err instanceof AuthError
+          ? err.message
+          : "No se pudo generar el registro de prospectos. Intente de nuevo.",
+      );
+    } finally {
+      setGenerandoRegistro(false);
+    }
+  };
 
   const descargarDesdeLista = async (e: EmpresaDetalle) => {
     setDescargandoId(e.empresa_id);
@@ -654,6 +680,21 @@ export function EmpresasTab({ token }: { token: string }) {
         />
         <button type="button" className="btn-ghost btn-sm" onClick={cargar}>
           Actualizar
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={descargarRegistroProspectos}
+          disabled={generandoRegistro || cargando || empresas.length === 0}
+          title={
+            empresas.length === 0 && !cargando
+              ? "Todavía no hay empresas registradas"
+              : "Excel del Entregable 3 con todas las empresas registradas"
+          }
+        >
+          {generandoRegistro
+            ? "Generando Excel…"
+            : "Descargar registro de prospectos"}
         </button>
       </div>
 
