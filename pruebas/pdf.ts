@@ -24,8 +24,6 @@ const diagnostico: Diagnostico = {
 const analisisIA: AnalisisIAGuardado | null = process.env.SIN_IA ? null : {
   generadoEn: new Date().toISOString(), modelo: 'gemini-3.5-flash-lite', reutilizado: false,
   analisis: {
-    resumen: 'La empresa ya realiza prácticas en varias materias, con fortalezas en gobernanza y comunidad. '
-      + 'La principal oportunidad está en seguridad y salud en el trabajo, que aún no ha abordado.',
     fortalezas: ['La gerencia impulsa las acciones con la comunidad.', 'Revisa y mejora el apoyo a la vereda.'],
     areasOportunidad: ['Seguridad y salud en el trabajo.', 'Manejo de residuos de la planta.'],
     prioridades: ['Empezar el SG-SST con apoyo de la ARL.', 'Formalizar el manejo de residuos.'],

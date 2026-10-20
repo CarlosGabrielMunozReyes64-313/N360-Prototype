@@ -77,7 +77,6 @@ interface AccionApi { accion: string; objetivo: string; horizonte: string; prior
 export interface AnalisisIAApi {
   diagnostico_id: string
   analisis: {
-    resumen: string
     fortalezas: string[]
     areas_oportunidad: string[]
     prioridades: string[]
@@ -199,7 +198,6 @@ export function analisisDesdeApi(api: unknown): AnalisisIAGuardado | null {
     .filter((r) => r.titulo)
 
   const analisis: AnalisisIA = {
-    resumen: texto(a.resumen),
     fortalezas: textos(a.fortalezas),
     areasOportunidad: textos(a.areas_oportunidad),
     prioridades: textos(a.prioridades),
@@ -208,7 +206,9 @@ export function analisisDesdeApi(api: unknown): AnalisisIAGuardado | null {
     accionesMedianoPlazo: acciones(a.acciones_mediano_plazo),
     conclusion: texto(a.conclusion),
   }
-  if (!analisis.resumen && recomendaciones.length === 0) return null
+  // Desde el prompt v5 no hay «resumen» ejecutivo: un análisis útil trae al
+  // menos recomendaciones o la conclusión.
+  if (!analisis.conclusion && recomendaciones.length === 0) return null
   return {
     analisis,
     generadoEn: texto(raiz.generado_en),

@@ -260,7 +260,6 @@ export interface AccionIA {
 }
 
 export interface AnalisisIA {
-  resumen: string
   fortalezas: string[]
   areasOportunidad: string[]
   prioridades: string[]
