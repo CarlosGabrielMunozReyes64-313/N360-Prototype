@@ -57,9 +57,6 @@ function Contenido({ datos }: { datos: AnalisisIAGuardado }) {
   const fecha = new Date(datos.generadoEn)
   return (
     <div className="rse-ia-contenido">
-      <h3 className="rse-ia-subtitulo">Resumen ejecutivo</h3>
-      <p className="rse-ia-parrafo">{a.resumen}</p>
-
       <div className="rse-ia-columnas">
         <Lista titulo="Fortalezas" items={a.fortalezas} />
         <Lista titulo="Áreas de oportunidad" items={a.areasOportunidad} />

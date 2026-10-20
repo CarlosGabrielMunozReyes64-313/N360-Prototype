@@ -223,8 +223,6 @@ export function construirDoc(d: DatosInforme): jsPDF {
       + 'revísela con el equipo NEXUS antes de tomar decisiones.',
       { size: 8.5, color: GRIS, despues: 2 },
     )
-    subtitulo('Resumen ejecutivo')
-    parrafo(ia.resumen, { size: 9.5, despues: 2 })
     if (ia.fortalezas.length) { subtitulo('Fortalezas'); vinetas(ia.fortalezas) }
     if (ia.areasOportunidad.length) { subtitulo('Áreas de oportunidad'); vinetas(ia.areasOportunidad) }
     if (ia.prioridades.length) { subtitulo('Prioridades'); vinetas(ia.prioridades, true) }

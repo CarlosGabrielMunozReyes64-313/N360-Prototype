@@ -37,7 +37,6 @@ const MIXTOS = diag((i) => ([0, 1, 2, 3, 4, 'diferente', 'NA'] as const)[i % 7])
 const API: AnalisisIAApi = {
   diagnostico_id: 'd-1',
   analisis: {
-    resumen: 'La empresa tiene prácticas organizadas y una oportunidad clara en seguridad y salud.',
     fortalezas: ['Compromiso de la gerencia.'],
     areas_oportunidad: ['Seguridad y salud en el trabajo.'],
     prioridades: ['Empezar el SG-SST.', 'Contar lo que hace.'],
@@ -182,7 +181,9 @@ describe('sección «Análisis inteligente» en Resultados', () => {
     expect(generar).toHaveBeenLastCalledWith(expect.objectContaining({ analisisIA: null }))
 
     soltar(new Response(JSON.stringify(API), { status: 200 }))
-    expect(await screen.findByText('Resumen ejecutivo')).toBeInTheDocument()
+    expect(await screen.findByText('Designar un responsable de SST')).toBeInTheDocument()
+    // Ya no se muestra el «Resumen ejecutivo» (prompt v5).
+    expect(screen.queryByText('Resumen ejecutivo')).toBe(null)
     for (const t of ['Fortalezas', 'Áreas de oportunidad', 'Prioridades', 'Recomendaciones',
       'Acciones a corto plazo', 'Acciones a mediano plazo', 'Conclusión']) {
       expect(screen.getByRole('heading', { name: t })).toBeInTheDocument()
@@ -211,7 +212,7 @@ describe('sección «Análisis inteligente» en Resultados', () => {
     expect(generar).toHaveBeenLastCalledWith(expect.objectContaining({ analisisIA: null }))
 
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
-    expect(await screen.findByText('Resumen ejecutivo')).toBeInTheDocument()
+    expect(await screen.findByText('Designar un responsable de SST')).toBeInTheDocument()
     expect(f).toHaveBeenCalledTimes(2)
   })
 
@@ -256,7 +257,8 @@ describe('informe PDF', () => {
   it('con análisis IA agrega todas sus secciones sin romper por caracteres raros', () => {
     const conIA = { ...base, analisisIA: analisisDesdeApi(API) }
     const t = texto(conIA)
-    for (const s of ['Resumen ejecutivo', 'Recomendaciones', 'Acciones a corto plazo', 'Acciones a mediano plazo',
+    expect(t).not.toContain('Resumen ejecutivo')
+    for (const s of ['Recomendaciones', 'Acciones a corto plazo', 'Acciones a mediano plazo',
       'Conclusi', 'Designar un responsable de SST', 'Prioridad alta']) {
       expect(t).toContain(s)
     }
@@ -268,7 +270,7 @@ describe('títulos del PDF', () => {
   // Texto de cada título tal como lo escribe construirDoc.
   const TITULOS = new Set([
     'Mapa de prácticas por materia', 'Sus fortalezas', 'Temas por empezar o formalizar', 'Matriz de priorización',
-    'Alertas informativas', 'Otras prácticas que nos contó', 'Análisis inteligente', 'Resumen ejecutivo',
+    'Alertas informativas', 'Otras prácticas que nos contó', 'Análisis inteligente',
     'Fortalezas', 'Áreas de oportunidad', 'Prioridades', 'Recomendaciones', 'Acciones a corto plazo',
     'Acciones a mediano plazo', 'Conclusión',
   ])
