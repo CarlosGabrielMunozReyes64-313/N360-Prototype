@@ -2,7 +2,7 @@ import { ORDEN_ETAPA, nombreEtapa } from '../engine/agregados'
 import { etiquetaEtapa } from '../data/escala'
 import { etapaDesdeApi } from '../auth/empresaApi'
 import type { Tamano, TipoCliente } from '../types'
-import { nombreCliente, nombreTamano, nombresVinculacion, nombresZonas } from '../data/tamizaje'
+import { nombreCliente, nombreTamano, nombresVinculacion, resumenLugares, resumenVecinos } from '../data/tamizaje'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import type { EmpresaDetalle, Estadisticas } from '../auth/adminApi'
@@ -356,7 +356,8 @@ export async function construirLibro(d: DatosReporte): Promise<ExcelJS.Workbook>
       { titulo: 'Tamaño', ancho: 16 },
       { titulo: 'Personas', ancho: 10 },
       { titulo: 'Vinculación', ancho: 24 },
-      { titulo: 'Territorio', ancho: 28 },
+      { titulo: 'Lugares (T5a)', ancho: 28 },
+      { titulo: 'Comunidades y vecinos (T5b)', ancho: 30 },
       { titulo: 'Clientes', ancho: 18 },
       { titulo: 'Perfil piloto (10–50)', ancho: 14 },
       { titulo: 'Autodiagnóstico', ancho: 14 },
@@ -369,7 +370,8 @@ export async function construirLibro(d: DatosReporte): Promise<ExcelJS.Workbook>
       e.razon_social, e.nit, e.dv, e.sector_nombre ?? e.sector_id, e.municipio,
       e.departamento ?? '—', e.anio ?? '—', nombreTamano(e.tamano as Tamano), e.personas ?? '—',
       e.vinculacion ? nombresVinculacion(e.vinculacion) : '—',
-      [e.zonas ? nombresZonas(e.zonas) : '', e.territorio ?? ''].filter((x) => x && x !== '—').join(' · ') || '—',
+      resumenLugares(e.zonas, e.territorio),
+      resumenVecinos(e.zonas, e.vecinos),
       e.clientes ? nombreCliente(e.clientes as TipoCliente) : '—',
       siNo(e.perfil_piloto), e.diagnostico_estado ?? '—', e.respuestas_con_etapa,
       e.practicas_registradas, e.pendientes_clasificar,

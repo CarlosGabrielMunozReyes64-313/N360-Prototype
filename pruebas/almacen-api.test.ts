@@ -17,9 +17,11 @@ const PERFIL: Perfil = {
 }
 const TAM: Tamizaje = {
   tamano: 'pequena', ingresos: 'menos_1000m', personas: '14', vinculacion: ['laboral', 'socios'],
-  vinculacionDetalle: '', zonas: ['barrios'], territorio: 'Barrio Colombia', clientes: 'personas', clientesDetalle: '',
+  vinculacionDetalle: '', zonas: ['barrios', 'viviendas'], territorio: 'Barrio Colombia',
+  vecinos: 'Un colegio en la misma cuadra', clientes: 'personas', clientesDetalle: '',
 }
 const USUARIO = 'u-1'
+const REUTILIZAR = PREGUNTAS.find((p) => p.id === '04b')!.ejemplos.find((e) => e.antes === 'Reutilizar')!.texto
 
 beforeEach(() => localStorage.clear())
 
@@ -54,6 +56,15 @@ describe('migración de datos guardados en el navegador', () => {
     expect(cargarHistorial(USUARIO).map((e) => e.tamizaje?.personas ?? null)).toEqual([null, '14'])
   })
 
+  it('los ejemplos guardados con el texto anterior se leen con el texto descriptivo', () => {
+    const d: Diagnostico = {
+      respuestas: { '04b': { texto: '', ejemplos: ['Reutilizar', 'Algo propio'], otro: '', etapa: 2 } },
+      fortalecer: {}, comentarioFinal: '',
+    }
+    guardarBorrador(USUARIO, d, { filas: {}, elegida: null })
+    expect(cargarBorrador(USUARIO)?.diagnostico.respuestas['04b'].ejemplos).toEqual([REUTILIZAR, 'Algo propio'])
+  })
+
   it('el borrador del autodiagnóstico ignora formatos anteriores', () => {
     localStorage.setItem(`n360_rse:${USUARIO}`, JSON.stringify({ respuestas: { '1.1': 3 } }))
     expect(cargarBorrador(USUARIO)).toBe(null)
@@ -76,9 +87,17 @@ describe('conversiones con la API', () => {
     const t = tamizajeDesdeApi({
       ciclo_id: 'c', anio: 2026, tamano: p.tamano, ingresos_rango: p.ingresos_rango, personas: p.personas,
       vinculacion: p.vinculacion, vinculacion_detalle: p.vinculacion_detalle, zonas: p.zonas,
-      territorio: p.territorio, clientes: p.clientes, clientes_detalle: p.clientes_detalle, actualizado_en: '',
+      territorio: p.territorio, vecinos: p.vecinos, clientes: p.clientes, clientes_detalle: p.clientes_detalle,
+      actualizado_en: '',
     })
+    expect(p.vecinos).toBe('Un colegio en la misma cuadra')
     expect(t).toEqual(TAM)
+    // Un tamizaje guardado antes de dividir T5 llega sin «vecinos».
+    expect(tamizajeDesdeApi({
+      ciclo_id: 'c', anio: 2026, tamano: 'micro', ingresos_rango: null, personas: 3, vinculacion: ['socios'],
+      vinculacion_detalle: null, zonas: ['rural'], territorio: null, clientes: 'mezcla', clientes_detalle: null,
+      actualizado_en: '',
+    })?.vecinos).toBe('')
     expect(perfilDesdeApi({ empresa_id: 'e', razon_social: p.razon_social, nit: p.nit, dv: p.dv, sector_id: p.sector_id, municipio: p.municipio, departamento: p.departamento ?? null, extranjera: false })).toEqual(PERFIL)
     expect(tamizajeDesdeApi(null)).toBe(null)
   })
@@ -86,7 +105,7 @@ describe('conversiones con la API', () => {
   it('diagnóstico y priorización de ida y vuelta, con la clasificación de NEXUS', () => {
     const d: Diagnostico = {
       respuestas: {
-        '04b': { texto: 'Compost', ejemplos: ['Reutilizar'], otro: 'Compostaje', etapa: 'diferente' },
+        '04b': { texto: 'Compost', ejemplos: [REUTILIZAR], otro: 'Compostaje', etapa: 'diferente' },
         '06b': { texto: '', ejemplos: [], otro: '', etapa: 'NA' },
       },
       fortalecer: { '04': 'Residuos' },
@@ -113,7 +132,7 @@ describe('informe PDF de la empresa', () => {
   it('se construye con el mapa, la matriz y las alertas, sin caracteres fuera de WinAnsi', () => {
     const d: Diagnostico = {
       respuestas: Object.fromEntries(PREGUNTAS.map((p, i) => [p.id, {
-        texto: `Práctica “${p.id}” — con detalle…`, ejemplos: p.ejemplos.slice(0, 1), otro: '', etapa: ([0, 1, 2, 3, 4] as const)[i % 5],
+        texto: `Práctica “${p.id}” — con detalle…`, ejemplos: p.ejemplos.slice(0, 1).map((e) => e.texto), otro: '', etapa: ([0, 1, 2, 3, 4] as const)[i % 5],
       }])),
       fortalecer: { '03': 'Capacitar al equipo' },
       comentarioFinal: 'Donamos pan a un hogar infantil',

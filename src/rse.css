@@ -30,9 +30,57 @@
   padding: 7px 13px; font-size: 13px; color: var(--nx-text); transition: all 0.15s;
 }
 .rse-chip input { accent-color: var(--nx-dark); margin: 0; }
+/* En el tamizaje los chips están dentro de .field, cuya regla de inputs
+ * (ancho 100 %, relleno, borde) estiraba la casilla y partía el texto. */
+.rse-chip input, .rse-etapa input { width: auto; padding: 0; border: 0; flex-shrink: 0; }
 .rse-chip:hover { border-color: var(--nx-mid); }
 .rse-chip.is-on { background: var(--nx-light); border-color: var(--nx-mid); color: var(--nx-dark); font-weight: 600; }
 .rse-chip:focus-within { outline: 2px solid var(--nx-mid); outline-offset: 2px; }
+
+/* Ejemplos descriptivos del autodiagnóstico: tarjetas en rejilla en lugar
+ * de píldoras, para que las frases largas se lean bien. */
+.rse-ejemplos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 8px; }
+.rse-ejemplos-lista .rse-chip {
+  align-items: flex-start; border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; line-height: 1.45;
+}
+.rse-ejemplos-lista .rse-chip input { margin-top: 2px; }
+.rse-ejemplos-lista .rse-chip.is-on { font-weight: 500; }
+
+/* ------------------------------------------- explicaciones al pasar el mouse */
+.ayuda { display: contents; }
+.rse-pista { font-size: 12.5px; color: var(--nx-muted); margin: 8px 0 0; max-width: 66ch; }
+.termino {
+  text-decoration: underline dotted var(--nx-mid);
+  text-decoration-thickness: 1.5px; text-underline-offset: 3px;
+  cursor: help; border-radius: 3px;
+}
+.termino:hover { text-decoration-style: solid; }
+/* Igual que .termino, para textos cuya explicación ya va en el control. */
+.termino-sin-foco {
+  text-decoration: underline dotted var(--nx-mid);
+  text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: help;
+}
+.termino:focus-visible { outline: 2px solid var(--nx-mid); outline-offset: 2px; }
+.ayuda-globo {
+  position: fixed; top: 0; left: 0; z-index: 1000;
+  max-width: min(320px, calc(100vw - 16px));
+  background: var(--nx-dark); color: #fff;
+  font-family: var(--body); font-size: 12.5px; font-weight: 400; line-height: 1.5;
+  text-align: left; letter-spacing: normal; text-transform: none; white-space: normal;
+  padding: 9px 12px; border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(2, 64, 41, 0.22);
+  pointer-events: none;
+  animation: ayuda-entra 120ms ease-out;
+}
+.ayuda-globo::after {
+  content: ''; position: absolute; left: var(--flecha, 50%);
+  width: 0; height: 0; margin-left: -6px; border: 6px solid transparent;
+}
+.ayuda-globo[data-lado='arriba']::after { top: 100%; border-top-color: var(--nx-dark); }
+.ayuda-globo[data-lado='abajo']::after { bottom: 100%; border-bottom-color: var(--nx-dark); }
+@keyframes ayuda-entra { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ayuda-globo { animation: none; } }
 
 /* ------------------------------------------------------------ preguntas */
 .rse-materia-desc { color: var(--nx-muted); font-size: 13.5px; margin: 4px 0 18px; max-width: 66ch; }

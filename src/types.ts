@@ -18,13 +18,26 @@ export type Etapa = Nivel | 'diferente' | 'NA'
 export type MateriaId =
   | 'gobernanza' | 'ddhh' | 'laborales' | 'ambiente' | 'practicas' | 'consumidores' | 'comunidad'
 
+/** Un ejemplo orientador de una pregunta del autodiagnóstico. */
+export interface Ejemplo {
+  /** Lo que ve y marca la empresa. Es también el valor que se guarda en
+   * la respuesta (RespuestaPregunta.ejemplos). */
+  texto: string
+  /** Explicación sencilla que aparece al pasar el mouse por el ejemplo. */
+  ayuda: string
+  /** Texto corto con el que se guardaba este ejemplo antes de hacerlo más
+   * descriptivo. Las respuestas que lo traen se traducen al leerlas (ver
+   * actualizarEjemplos en data/rseExpress.ts y db/012 en el backend). */
+  antes?: string
+}
+
 export interface Pregunta {
   /** Código del Anexo 1: '01a' … '07c'. */
   id: string
   /** Pregunta principal abierta. */
   texto: string
   /** Ejemplos orientadores: ayudan a recordar, no limitan la respuesta. */
-  ejemplos: string[]
+  ejemplos: Ejemplo[]
   /** Para qué se pregunta (lo lee NEXUS, no la empresa). */
   proposito: string
   arquetipo: Arquetipo
@@ -130,20 +143,33 @@ export type Tamano = 'micro' | 'pequena' | 'mediana' | 'nose'
 export type RangoIngresos = 'menos_1000m' | '1000m_10000m' | '10000m_50000m' | 'mas_50000m' | 'no_indica'
 /** T2 · cómo están vinculadas las personas. */
 export type Vinculacion = 'laboral' | 'servicios' | 'socios' | 'temporada' | 'otra'
-/** T5 · lugares y comunidades cercanas. */
-export type Zona = 'barrios' | 'veredas' | 'rural' | 'indigenas' | 'afro' | 'otras'
+/** T5a · ¿En qué lugares desarrolla su actividad? */
+export type Lugar = 'barrios' | 'comercial' | 'industrial' | 'veredas' | 'rural' | 'otras'
+/** T5b · ¿Qué comunidades o vecinos están cerca de su operación? */
+export type Vecino =
+  | 'viviendas' | 'instituciones' | 'campesinos' | 'negocios'
+  | 'indigenas' | 'afro' | 'otros_vecinos' | 'ninguno'
+/** T5a y T5b comparten la lista `zonas` del tamizaje: cada código
+ * pertenece a una sola de las dos preguntas (ver LUGARES y VECINOS en
+ * data/tamizaje.ts). Así los tamizajes guardados antes de dividir la
+ * pregunta T5 siguen siendo válidos. */
+export type Zona = Lugar | Vecino
 /** T6 · ¿Quiénes son principalmente sus clientes? */
 export type TipoCliente = 'personas' | 'empresas' | 'publicas' | 'mezcla'
 
-/** Tamizaje «Conozcamos su empresa» (T1, T2, T5 y T6 del Anexo 1). */
+/** Tamizaje «Conozcamos su empresa» (T1, T2, T5a, T5b y T6 del Anexo 1). */
 export interface Tamizaje {
   tamano: Tamano | ''
   ingresos: RangoIngresos | ''
   personas: string
   vinculacion: Vinculacion[]
   vinculacionDetalle: string
+  /** Lugares (T5a) y comunidades o vecinos (T5b) marcados. */
   zonas: Zona[]
+  /** T5a · texto libre sobre los lugares donde opera. */
   territorio: string
+  /** T5b · texto libre sobre las comunidades o vecinos cercanos. */
+  vecinos: string
   clientes: TipoCliente | ''
   clientesDetalle: string
 }

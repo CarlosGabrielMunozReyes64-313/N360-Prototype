@@ -18,7 +18,8 @@ import {
   nombreIngresos,
   nombreTamano,
   nombresVinculacion,
-  nombresZonas,
+  resumenLugares,
+  resumenVecinos,
 } from "../data/tamizaje";
 import {
   calificacionDe,
@@ -397,10 +398,13 @@ function FichaEmpresa({
                 etiqueta="T2 · Detalle"
                 valor={texto(e.vinculacion_detalle)}
               />
-              <Dato etiqueta="T5 · Lugares" valor={nombresZonas(e.zonas)} />
               <Dato
-                etiqueta="T5 · Territorio y vecinos"
-                valor={texto(e.territorio)}
+                etiqueta="T5a · Lugares"
+                valor={resumenLugares(e.zonas, e.territorio)}
+              />
+              <Dato
+                etiqueta="T5b · Comunidades y vecinos"
+                valor={resumenVecinos(e.zonas, e.vecinos)}
               />
               <Dato
                 etiqueta="T6 · Clientes"

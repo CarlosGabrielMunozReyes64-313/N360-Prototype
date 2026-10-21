@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { MATERIAS, PESOS_SECTOR, PREGUNTAS, RSE_EXPRESS } from '../src/data/rseExpress'
-import { TAMIZAJE_VACIO, consumidoresAplica, enPerfilPiloto, tamizajeCompleto } from '../src/data/tamizaje'
+import {
+  LUGARES, TAMIZAJE_VACIO, VECINOS, ZONAS, alternarVecino, consumidoresAplica, enPerfilPiloto, lugaresDe,
+  resumenLugares, resumenVecinos, tamizajeCompleto, vecinosDe,
+} from '../src/data/tamizaje'
+import { actualizarEjemplos } from '../src/data/rseExpress'
+import { ETAPAS } from '../src/data/escala'
+import { GLOSARIO, partirConGlosario } from '../src/data/glosario'
 import { clasificar } from '../src/data/escala'
 import {
   alertasInformativas, calificacionDe, categoriaDe, evaluar, mapaPracticas, oportunidades,
@@ -10,7 +16,7 @@ import type { Diagnostico, Etapa, RespuestaPregunta, Tamizaje } from '../src/typ
 
 const TAM: Tamizaje = {
   ...TAMIZAJE_VACIO, tamano: 'pequena', personas: '24', vinculacion: ['laboral'],
-  zonas: ['barrios'], clientes: 'personas',
+  zonas: ['barrios', 'viviendas'], clientes: 'personas',
 }
 const r = (etapa: Etapa | null, texto = 'Lo hacemos así', extra: Partial<RespuestaPregunta> = {}): RespuestaPregunta =>
   ({ texto, ejemplos: [], otro: '', etapa, ...extra })
@@ -55,13 +61,39 @@ describe('catálogo del Anexo 1', () => {
 })
 
 describe('tamizaje', () => {
-  it('exige T1, T2 (número y vinculación), T5 (zona o texto) y T6', () => {
+  it('exige T1, T2 (número y vinculación), T5a (lugar o texto), T5b (vecino o texto) y T6', () => {
     expect(tamizajeCompleto(TAM)).toBe(true)
     expect(tamizajeCompleto({ ...TAM, personas: '0' })).toBe(false)
     expect(tamizajeCompleto({ ...TAM, vinculacion: [] })).toBe(false)
-    expect(tamizajeCompleto({ ...TAM, zonas: [], territorio: '  ' })).toBe(false)
-    expect(tamizajeCompleto({ ...TAM, zonas: [], territorio: 'Vereda El Tiple' })).toBe(true)
     expect(tamizajeCompleto({ ...TAM, clientes: '' })).toBe(false)
+    // T5a: un lugar o el texto. Un vecino solo no responde T5a.
+    expect(tamizajeCompleto({ ...TAM, zonas: ['viviendas'], territorio: '  ' })).toBe(false)
+    expect(tamizajeCompleto({ ...TAM, zonas: ['viviendas'], territorio: 'Vereda El Tiple' })).toBe(true)
+    // T5b: un vecino (incluido «ninguno») o el texto. Un lugar solo no responde T5b.
+    expect(tamizajeCompleto({ ...TAM, zonas: ['barrios'] })).toBe(false)
+    expect(tamizajeCompleto({ ...TAM, zonas: ['barrios'], vecinos: 'Una escuela al lado' })).toBe(true)
+    expect(tamizajeCompleto({ ...TAM, zonas: ['barrios', 'ninguno'] })).toBe(true)
+  })
+
+  it('T5a y T5b comparten la lista de zonas sin mezclarse', () => {
+    const ids = ZONAS.map((z) => z.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(LUGARES.length + VECINOS.length).toBe(ids.length)
+    // Los códigos anteriores a la división siguen existiendo.
+    for (const viejo of ['barrios', 'veredas', 'rural', 'indigenas', 'afro', 'otras']) expect(ids).toContain(viejo)
+    expect(lugaresDe(['veredas', 'indigenas', 'rural'])).toEqual(['veredas', 'rural'])
+    expect(vecinosDe(['veredas', 'indigenas', 'rural'])).toEqual(['indigenas'])
+    expect(resumenLugares(['veredas', 'afro'], ' Vereda La Palma ')).toBe('Veredas. Vereda La Palma')
+    expect(resumenVecinos(['veredas'], '')).toBe('—')
+    // Todas las opciones explican qué significan.
+    for (const z of ZONAS) expect(z.ayuda.length).toBeGreaterThan(20)
+  })
+
+  it('«No hay comunidades ni vecinos cerca» excluye a los demás vecinos, no a los lugares', () => {
+    expect(alternarVecino(['barrios', 'viviendas', 'afro'], 'ninguno')).toEqual(['barrios', 'ninguno'])
+    expect(alternarVecino(['barrios', 'ninguno'], 'instituciones')).not.toContain('ninguno')
+    expect(alternarVecino(['rural', 'ninguno'], 'campesinos')).toEqual(['rural', 'campesinos'])
+    expect(alternarVecino(['rural', 'campesinos'], 'campesinos')).toEqual(['rural'])
   })
 
   it('Consumidores solo aplica si vende a personas o a una mezcla', () => {
@@ -254,5 +286,52 @@ describe('alertas informativas', () => {
   it('territorio cuando hay comunidades étnicas cerca', () => {
     expect(ids(todas(3), { ...TAM, zonas: ['rural', 'indigenas'] })).toContain('territorio')
     expect(ids(todas(3), { ...TAM, zonas: ['afro'] })).toContain('territorio')
+  })
+})
+
+describe('ejemplos descriptivos y explicaciones', () => {
+  it('cada ejemplo es descriptivo, trae su ayuda y cabe en lo que guarda el backend', () => {
+    for (const p of PREGUNTAS) {
+      const textos = p.ejemplos.map((e) => e.texto)
+      expect(new Set(textos).size).toBe(textos.length)
+      for (const e of p.ejemplos) {
+        expect(e.texto.length).toBeGreaterThan(40)
+        expect(e.texto.length).toBeLessThanOrEqual(200)
+        expect(e.ayuda.length).toBeGreaterThan(20)
+        expect(e.antes).toBeTruthy()
+      }
+    }
+  })
+
+  it('traduce los ejemplos guardados con el texto anterior', () => {
+    const p02a = PREGUNTAS.find((p) => p.id === '02a')!
+    const nuevo = p02a.ejemplos.find((e) => e.antes === 'Trato respetuoso')!.texto
+    expect(actualizarEjemplos('02a', ['Trato respetuoso'])).toEqual([nuevo])
+    // Ya vigente, desconocido o repetido: se conserva una vez.
+    expect(actualizarEjemplos('02a', [nuevo, 'Trato respetuoso', 'Otra cosa'])).toEqual([nuevo, 'Otra cosa'])
+    // «Buzón» existe en 02c y en 03a con textos distintos: cuenta la pregunta.
+    expect(actualizarEjemplos('02c', ['Buzón'])[0]).not.toBe(actualizarEjemplos('03a', ['Buzón'])[0])
+    expect(actualizarEjemplos('99z', ['Buzón'])).toEqual(['Buzón'])
+  })
+
+  it('cada etapa explica qué significa', () => {
+    for (const e of ETAPAS) expect(e.explicacion.length).toBeGreaterThan(20)
+  })
+
+  it('el glosario marca palabras completas, una vez y sin perder texto', () => {
+    const texto = '¿Cómo evita la corrupción y los conflictos de interés? La corrupción afecta a proveedores.'
+    const partes = partirConGlosario(texto)
+    expect(partes.map((f) => (typeof f === 'string' ? f : f.texto)).join('')).toBe(texto)
+    const terminos = partes.filter((f) => typeof f !== 'string').map((f) => (f as { texto: string }).texto)
+    expect(terminos).toEqual(['corrupción', 'conflictos de interés', 'proveedores'])
+    // No marca dentro de otra palabra.
+    expect(partirConGlosario('Los RSEguros no cuentan')).toEqual(['Los RSEguros no cuentan'])
+    expect(partirConGlosario('Sin términos')).toEqual(['Sin términos'])
+    for (const g of GLOSARIO) expect(g.definicion.length).toBeGreaterThan(20)
+  })
+
+  it('las preguntas del autodiagnóstico tienen términos explicados', () => {
+    const conTermino = PREGUNTAS.filter((p) => partirConGlosario(p.texto).some((f) => typeof f !== 'string'))
+    expect(conTermino.map((p) => p.id)).toEqual(expect.arrayContaining(['02a', '02b', '04b', '05a', '06b', '07b']))
   })
 })

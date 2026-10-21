@@ -58,6 +58,7 @@ export interface TamizajeActividad {
   vinculacion: string[];
   zonas: string[];
   territorio: string | null;
+  vecinos?: string | null;
   clientes: string;
   actualizado_en: string;
   creado_en: string;
@@ -337,6 +338,7 @@ export interface EmpresaDetalle {
   vinculacion_detalle: string | null;
   zonas: string[] | null;
   territorio: string | null;
+  vecinos?: string | null;
   clientes: string | null;
   clientes_detalle: string | null;
   /** Criterio del piloto: entre 10 y 50 personas. */

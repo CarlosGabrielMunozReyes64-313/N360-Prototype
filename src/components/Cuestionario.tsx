@@ -2,6 +2,9 @@ import { useState } from 'react'
 import type { Diagnostico, Etapa, Instrumento, Materia, Pregunta, RespuestaPregunta, Tamizaje } from '../types'
 import { ETAPAS, etiquetaEtapa } from '../data/escala'
 import { describeAlgo, materiasFuera, preguntaCompleta, progreso } from '../engine/scoring'
+import { Ayuda, TextoConGlosario } from './Ayuda'
+
+const AYUDA_DIFERENTE = 'Si lo que hacen no se parece a ningún ejemplo, escríbalo aquí con sus palabras. El equipo NEXUS lo tendrá en cuenta.'
 
 const RESPUESTA_VACIA: RespuestaPregunta = { texto: '', ejemplos: [], otro: '', etapa: null }
 
@@ -23,6 +26,8 @@ interface Props {
  * principal con texto libre, ejemplos orientadores opcionales, «Hacemos
  * algo diferente: ___» y «¿En qué punto está?». Al final de cada materia,
  * «¿Qué le gustaría fortalecer?»; al final de todo, la pregunta abierta.
+ * Los ejemplos, las etapas y los términos poco comunes explican qué
+ * significan al pasar el mouse (components/Ayuda.tsx).
  */
 export function Cuestionario({
   instrumento, diagnostico, tamizaje, materiaInicial = 0,
@@ -41,11 +46,15 @@ export function Cuestionario({
 
   return (
     <section className="card">
-      <div className="eyebrow">Autodiagnóstico RSE Express</div>
+      <div className="eyebrow">Autodiagnóstico <TextoConGlosario texto="RSE" /> Express</div>
       <h1 className="title">Cuéntenos qué hace hoy su empresa</h1>
       <p className="lede">
         Responda con sus palabras. Los ejemplos solo ayudan a recordar: no son una lista para
         cumplir. Lo que escribe se guarda solo.
+      </p>
+      <p className="rse-pista">
+        Pase el mouse (o toque) sobre los ejemplos, las opciones y las palabras subrayadas para ver
+        qué significan.
       </p>
 
       <div className="progress-line">
@@ -128,7 +137,7 @@ function BloqueMateria({ materia, diagnostico, onRespuesta, onFortalecer }: {
   return (
     <div>
       <h2 className="q-section-title q-section-first">{materia.numero} · {materia.nombre}</h2>
-      <p className="rse-materia-desc">{materia.descripcion}</p>
+      <p className="rse-materia-desc"><TextoConGlosario texto={materia.descripcion} /></p>
 
       {materia.preguntas.map((p) => (
         <TarjetaPregunta key={p.id} pregunta={p}
@@ -164,7 +173,7 @@ function TarjetaPregunta({ pregunta: p, respuesta: r, onChange }: {
     <article className="rse-pregunta" aria-labelledby={`p-${p.id}`}>
       <div className="rse-pregunta-cabeza">
         <span className="q-id">{p.id}</span>
-        <p id={`p-${p.id}`} className="rse-pregunta-texto">{p.texto}</p>
+        <p id={`p-${p.id}`} className="rse-pregunta-texto"><TextoConGlosario texto={p.texto} /></p>
         {preguntaCompleta(r) && <span className="rse-listo" aria-label="Pregunta completa">✓</span>}
       </div>
 
@@ -177,22 +186,26 @@ function TarjetaPregunta({ pregunta: p, respuesta: r, onChange }: {
         <legend className="rse-sublabel">
           Ejemplos que pueden ayudarle a recordar <span className="rse-opcional">(opcional, marque los que apliquen)</span>
         </legend>
-        <div className="rse-ejemplos">
+        <div className="rse-ejemplos rse-ejemplos-lista">
           {p.ejemplos.map((e) => {
-            const on = r.ejemplos.includes(e)
+            const on = r.ejemplos.includes(e.texto)
             return (
-              <label key={e} className={'rse-chip' + (on ? ' is-on' : '')}>
-                <input type="checkbox" checked={on} onChange={() => alternarEjemplo(e)} />
-                {e}
-              </label>
+              <Ayuda key={e.texto} texto={e.ayuda}>
+                <label className={'rse-chip' + (on ? ' is-on' : '')}>
+                  <input type="checkbox" checked={on} onChange={() => alternarEjemplo(e.texto)} />
+                  <span>{e.texto}</span>
+                </label>
+              </Ayuda>
             )
           })}
         </div>
-        <label className="rse-otro">
-          <span>Hacemos algo diferente:</span>
-          <input value={r.otro} maxLength={1000} placeholder="Escríbalo aquí"
-            onChange={(e) => set({ otro: e.target.value })} />
-        </label>
+        <Ayuda texto={AYUDA_DIFERENTE} alEnfocar={false}>
+          <label className="rse-otro">
+            <span className="termino-sin-foco">Hacemos algo diferente:</span>
+            <input value={r.otro} maxLength={1000} placeholder="Escríbalo aquí"
+              onChange={(e) => set({ otro: e.target.value })} />
+          </label>
+        </Ayuda>
       </fieldset>
 
       <fieldset className="rse-fieldset">
@@ -201,11 +214,13 @@ function TarjetaPregunta({ pregunta: p, respuesta: r, onChange }: {
           {ETAPAS.map((x) => {
             const on = r.etapa === x.valor
             return (
-              <label key={String(x.valor)} className={'rse-etapa' + (on ? ' is-on' : '')}>
-                <input type="radio" name={nombre} checked={on}
-                  onChange={() => set({ etapa: x.valor as Etapa, clasificada: x.valor === 'diferente' ? r.clasificada ?? null : null })} />
-                <span>{x.etiqueta}</span>
-              </label>
+              <Ayuda key={String(x.valor)} texto={x.explicacion}>
+                <label className={'rse-etapa' + (on ? ' is-on' : '')}>
+                  <input type="radio" name={nombre} checked={on}
+                    onChange={() => set({ etapa: x.valor as Etapa, clasificada: x.valor === 'diferente' ? r.clasificada ?? null : null })} />
+                  <span>{x.etiqueta}</span>
+                </label>
+              </Ayuda>
             )
           })}
         </div>

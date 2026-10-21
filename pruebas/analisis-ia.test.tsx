@@ -18,7 +18,7 @@ const PERFIL: Perfil = {
 }
 const TAM: Tamizaje = {
   tamano: 'pequena', ingresos: '', personas: '32', vinculacion: ['laboral'], vinculacionDetalle: '',
-  zonas: ['veredas'], territorio: '', clientes: 'personas', clientesDetalle: '',
+  zonas: ['veredas', 'campesinos'], territorio: '', vecinos: '', clientes: 'personas', clientesDetalle: '',
 }
 
 function diag(etapa: (i: number) => Etapa): Diagnostico {

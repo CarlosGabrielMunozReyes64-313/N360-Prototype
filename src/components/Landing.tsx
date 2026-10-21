@@ -125,7 +125,7 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
               <h3 className="lp-h3">Cómo funciona el RSE Express</h3>
               <p className="lp-sub">Unos 30 a 40 minutos · pensado para micro, pequeñas y medianas empresas</p>
               <ul className="lp-list">
-                <li>Cuatro preguntas para conocer tu empresa (tamaño, personas, territorio y clientes)</li>
+                <li>Cinco preguntas para conocer tu empresa (tamaño, personas, lugares, vecinos y clientes)</li>
                 <li>Por cada pregunta: tu respuesta, ejemplos opcionales y en qué punto estás</li>
                 <li>«Hacemos algo diferente» y «No aplica» también son respuestas válidas</li>
                 <li>Una pregunta por materia sobre lo que te gustaría fortalecer</li>
@@ -228,7 +228,7 @@ const PASOS = [
   {
     titulo: 'Registra tu empresa',
     texto:
-      'Datos básicos y cuatro preguntas sobre tu realidad: tamaño, personas, territorio y clientes. Sin documentos ni cifras exactas.',
+      'Datos básicos y cinco preguntas sobre tu realidad: tamaño, personas, lugares, vecinos y clientes. Sin documentos ni cifras exactas.',
   },
   {
     titulo: 'Cuenta lo que hace tu empresa',

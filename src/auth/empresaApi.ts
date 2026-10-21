@@ -20,8 +20,12 @@ export interface EmpresaPayload {
   personas: number
   vinculacion: string[]
   vinculacion_detalle: string | null
+  /** T5a (lugares) y T5b (comunidades o vecinos) en una sola lista. */
   zonas: string[]
+  /** T5a · texto libre. */
   territorio: string | null
+  /** T5b · texto libre. */
+  vecinos: string | null
   clientes: 'personas' | 'empresas' | 'publicas' | 'mezcla'
   clientes_detalle: string | null
 }
@@ -73,6 +77,9 @@ export interface TamizajeApi {
   vinculacion_detalle: string | null
   zonas: string[]
   territorio: string | null
+  /** Null en los tamizajes guardados antes de dividir T5 (o con un
+   * backend anterior a db/012). */
+  vecinos?: string | null
   clientes: string
   clientes_detalle: string | null
   actualizado_en: string
@@ -120,7 +127,7 @@ export function tamizajeDesdeApi(t: TamizajeApi | null): Tamizaje | null {
   return normalizarTamizaje({
     tamano: t.tamano, ingresos: t.ingresos_rango ?? '', personas: String(t.personas),
     vinculacion: t.vinculacion, vinculacionDetalle: t.vinculacion_detalle ?? '',
-    zonas: t.zonas, territorio: t.territorio ?? '', clientes: t.clientes,
+    zonas: t.zonas, territorio: t.territorio ?? '', vecinos: t.vecinos ?? '', clientes: t.clientes,
     clientesDetalle: t.clientes_detalle ?? '',
   })
 }
@@ -154,6 +161,7 @@ export function payloadEmpresa(perfil: Perfil, t: Tamizaje): EmpresaPayload {
     vinculacion_detalle: opcional(t.vinculacionDetalle),
     zonas: t.zonas,
     territorio: opcional(t.territorio),
+    vecinos: opcional(t.vecinos),
     clientes: t.clientes as EmpresaPayload['clientes'],
     clientes_detalle: opcional(t.clientesDetalle),
   }

@@ -25,7 +25,7 @@ function descargarCSV(filas: EmpresaDetalle[]) {
   const encabezados = [
     'razon_social', 'nit', 'dv', 'sector', 'municipio', 'departamento',
     'anio', 'tamano', 'ingresos_rango', 'personas', 'vinculacion', 'vinculacion_detalle',
-    'zonas', 'territorio', 'clientes', 'clientes_detalle', 'perfil_piloto',
+    'zonas', 'territorio', 'vecinos', 'clientes', 'clientes_detalle', 'perfil_piloto',
     'diagnostico_estado', 'respuestas_con_etapa', 'practicas_registradas', 'pendientes_clasificar',
     'creado_en',
   ]
@@ -38,7 +38,7 @@ function descargarCSV(filas: EmpresaDetalle[]) {
     ...filas.map((f) => [
       f.razon_social, f.nit, f.dv, f.sector_nombre ?? f.sector_id, f.municipio, f.departamento,
       f.anio, f.tamano, f.ingresos_rango, f.personas, (f.vinculacion ?? []).join(' | '), f.vinculacion_detalle,
-      (f.zonas ?? []).join(' | '), f.territorio, f.clientes, f.clientes_detalle,
+      (f.zonas ?? []).join(' | '), f.territorio, f.vecinos, f.clientes, f.clientes_detalle,
       f.perfil_piloto === null ? '' : f.perfil_piloto ? 'si' : 'no',
       f.diagnostico_estado, f.respuestas_con_etapa, f.practicas_registradas, f.pendientes_clasificar,
       f.creado_en,

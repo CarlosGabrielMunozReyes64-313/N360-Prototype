@@ -28,8 +28,9 @@ const tamizajeArb = fc.record<Tamizaje>({
   personas: fc.integer({ min: 1, max: 500 }).map(String),
   vinculacion: fc.constant(['laboral']),
   vinculacionDetalle: fc.constant(''),
-  zonas: fc.subarray(['barrios', 'veredas', 'rural', 'indigenas', 'afro', 'otras'] as const).map((z) => [...z]),
+  zonas: fc.subarray(['barrios', 'veredas', 'rural', 'indigenas', 'afro', 'otras', 'viviendas', 'ninguno'] as const).map((z) => [...z]),
   territorio: fc.constant('Centro'),
+  vecinos: fc.constant(''),
   clientes: fc.constantFrom('personas', 'empresas', 'publicas', 'mezcla'),
   clientesDetalle: fc.constant(''),
 })

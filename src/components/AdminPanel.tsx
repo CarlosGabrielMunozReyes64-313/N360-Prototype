@@ -1,5 +1,5 @@
 import type { Tamano, TipoCliente } from '../types'
-import { nombreCliente, nombreTamano, nombresVinculacion, nombresZonas } from '../data/tamizaje'
+import { nombreCliente, nombreTamano, nombresVinculacion, resumenLugares, resumenVecinos } from '../data/tamizaje'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { AuthError } from '../auth/types'
@@ -792,7 +792,8 @@ function VistaActividad({
                 <strong>{t.razon_social} · ciclo {t.anio}</strong>
                 <span>
                   {nombreTamano(t.tamano as Tamano)} · {t.personas} personas ({nombresVinculacion(t.vinculacion).toLowerCase()}) ·
-                  Clientes: {nombreCliente(t.clientes as TipoCliente).toLowerCase()} · Territorio: {[nombresZonas(t.zonas), t.territorio].filter((x) => x && x !== '—').join(' · ') || '—'}
+                  Clientes: {nombreCliente(t.clientes as TipoCliente).toLowerCase()} · Lugares: {resumenLugares(t.zonas, t.territorio)} ·
+                  Vecinos: {resumenVecinos(t.zonas, t.vecinos)}
                 </span>
                 <span className="evento-meta">
                   Registrado el {formatearFecha(t.creado_en)}

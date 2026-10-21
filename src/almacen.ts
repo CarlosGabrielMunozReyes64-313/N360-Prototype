@@ -2,6 +2,7 @@ import type {
   Calificacion, Diagnostico, Etapa, Perfil, Priorizacion, Puntaje, RespuestaPregunta, Tamizaje,
 } from './types'
 import { CLIENTES, RANGOS_INGRESOS, TAMANOS, VINCULACIONES, ZONAS } from './data/tamizaje'
+import { actualizarEjemplos } from './data/rseExpress'
 
 /**
  * Guardado local por cuenta (localStorage). Es la copia inmediata: el
@@ -13,6 +14,11 @@ import { CLIENTES, RANGOS_INGRESOS, TAMANOS, VINCULACIONES, ZONAS } from './data
  * de la empresa y se descarta el tamizaje, igual que hace la migración 009
  * en la base de datos. En el historial se conserva la fecha y el perfil de
  * cada cambio, pero no el tamizaje retirado.
+ *
+ * Dentro de la versión 2 hubo dos ajustes que no cambian la versión:
+ * T5 se dividió en T5a y T5b (campo nuevo `vecinos`, vacío en los datos
+ * viejos) y los ejemplos del autodiagnóstico se volvieron descriptivos
+ * (los textos cortos guardados se traducen al leerlos).
  */
 export const VERSION_ALMACEN = 2
 
@@ -70,6 +76,7 @@ export function normalizarTamizaje(v: unknown): Tamizaje | null {
     vinculacionDetalle: texto(t.vinculacionDetalle),
     zonas: listaDe(ZONAS, t.zonas),
     territorio: texto(t.territorio),
+    vecinos: texto(t.vecinos),
     clientes: deLista(CLIENTES, t.clientes),
     clientesDetalle: texto(t.clientesDetalle),
   }
@@ -97,7 +104,10 @@ export function normalizarDiagnostico(v: unknown): Diagnostico {
   const d = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
   const respuestas: Diagnostico['respuestas'] = {}
   if (d.respuestas && typeof d.respuestas === 'object')
-    for (const [k, r] of Object.entries(d.respuestas as object)) respuestas[k] = normalizarRespuesta(r)
+    for (const [k, r] of Object.entries(d.respuestas as object)) {
+      const n = normalizarRespuesta(r)
+      respuestas[k] = { ...n, ejemplos: actualizarEjemplos(k, n.ejemplos) }
+    }
   const fortalecer: Diagnostico['fortalecer'] = {}
   if (d.fortalecer && typeof d.fortalecer === 'object')
     for (const [k, t] of Object.entries(d.fortalecer as object)) if (esTexto(t)) fortalecer[k] = t

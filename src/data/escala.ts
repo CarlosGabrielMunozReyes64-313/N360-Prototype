@@ -6,19 +6,44 @@ import type { Etapa, Nivel, Verbo } from '../types'
  * interna y solo se usa para el análisis. A la empresa NO se le muestra
  * un puntaje de cumplimiento.
  */
-export const ETAPAS: { valor: Etapa; etiqueta: string; corta: string; ayuda?: string }[] = [
-  { valor: 0, etiqueta: 'Aún no lo hemos abordado', corta: 'Aún no abordado' },
-  { valor: 1, etiqueta: 'Estamos comenzando / Lo hacemos de manera informal', corta: 'Comenzando' },
-  { valor: 2, etiqueta: 'Lo tenemos organizado: hay acuerdos y alguien a cargo, esté o no por escrito', corta: 'Organizado' },
-  { valor: 3, etiqueta: 'Lo aplicamos y vemos resultados', corta: 'Con resultados' },
-  { valor: 4, etiqueta: 'Lo revisamos y mejoramos con lo aprendido', corta: 'En mejora continua' },
+export const ETAPAS: {
+  valor: Etapa
+  etiqueta: string
+  corta: string
+  /** Nota que aparece debajo cuando la etapa está elegida. */
+  ayuda?: string
+  /** Qué significa la opción, en palabras sencillas (al pasar el mouse). */
+  explicacion: string
+}[] = [
+  {
+    valor: 0, etiqueta: 'Aún no lo hemos abordado', corta: 'Aún no abordado',
+    explicacion: 'Todavía no hacen nada en este tema. No es algo malo: es el punto de partida y nos ayuda a encontrar oportunidades.',
+  },
+  {
+    valor: 1, etiqueta: 'Estamos comenzando / Lo hacemos de manera informal', corta: 'Comenzando',
+    explicacion: 'Hacen algo, pero de vez en cuando, cuando surge la necesidad o según quien esté. Todavía no hay acuerdos claros sobre cómo hacerlo.',
+  },
+  {
+    valor: 2, etiqueta: 'Lo tenemos organizado: hay acuerdos y alguien a cargo, esté o no por escrito', corta: 'Organizado',
+    explicacion: 'Ya está claro qué se hace, quién lo hace y cada cuánto, y se hace con regularidad. No importa si está escrito o no.',
+  },
+  {
+    valor: 3, etiqueta: 'Lo aplicamos y vemos resultados', corta: 'Con resultados',
+    explicacion: 'Lo hacen de forma constante y pueden contar qué cambió gracias a eso: por ejemplo, menos accidentes, menos consumo o clientes más satisfechos.',
+  },
+  {
+    valor: 4, etiqueta: 'Lo revisamos y mejoramos con lo aprendido', corta: 'En mejora continua',
+    explicacion: 'Además de aplicarlo, cada cierto tiempo revisan cómo va y hacen ajustes con lo que aprenden.',
+  },
   {
     valor: 'diferente', etiqueta: 'Hacemos algo diferente', corta: 'Algo diferente',
     ayuda: 'Cuéntenos qué hacen: el equipo NEXUS lo ubicará a partir de su respuesta.',
+    explicacion: 'Lo que hacen no encaja en las opciones anteriores. Cuéntenos con sus palabras qué hacen y el equipo NEXUS lo ubicará.',
   },
   {
     valor: 'NA', etiqueta: 'No aplica a nuestra empresa', corta: 'No aplica',
     ayuda: 'Sale del análisis: no cuenta como un cero.',
+    explicacion: 'El tema no tiene que ver con su empresa; por ejemplo, si no guarda datos de clientes. Sale del análisis: no cuenta como un cero.',
   },
 ]
 

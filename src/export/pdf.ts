@@ -3,7 +3,7 @@ import type { AccionIA, AnalisisIAGuardado, Diagnostico, Perfil, Priorizacion, T
 import { RSE_EXPRESS, SECTORES } from '../data/rseExpress'
 import { CATEGORIAS, etiquetaEtapa } from '../data/escala'
 import {
-  nombreCliente, nombreIngresos, nombreTamano, nombresVinculacion, nombresZonas,
+  nombreCliente, nombreIngresos, nombreTamano, nombresVinculacion, resumenLugares, resumenVecinos,
 } from '../data/tamizaje'
 import {
   alertasInformativas, calificacionDe, mapaPracticas, oportunidades, practicasRegistradas, sumaPrioridad,
@@ -119,7 +119,8 @@ export function construirDoc(d: DatosInforme): jsPDF {
   parrafo(`NIT ${perfil.nit}${perfil.dv ? '-' + perfil.dv : ''} · ${sector} · ${perfil.municipio}${perfil.departamento ? ', ' + perfil.departamento : ''}`, { color: GRIS, despues: 3 })
   parrafo(`Tamaño: ${nombreTamano(tamizaje.tamano)}${tamizaje.ingresos ? ` (ingresos: ${nombreIngresos(tamizaje.ingresos).toLowerCase()})` : ''}`, { size: 9.5, despues: 0.5 })
   parrafo(`Personas que trabajan con la empresa: ${tamizaje.personas} (${nombresVinculacion(tamizaje.vinculacion).toLowerCase()})`, { size: 9.5, despues: 0.5 })
-  parrafo(`Territorio: ${[nombresZonas(tamizaje.zonas), tamizaje.territorio.trim()].filter((x) => x && x !== '—').join('. ') || '—'}`, { size: 9.5, despues: 0.5 })
+  parrafo(`Lugares donde opera: ${resumenLugares(tamizaje.zonas, tamizaje.territorio)}`, { size: 9.5, despues: 0.5 })
+  parrafo(`Comunidades y vecinos cercanos: ${resumenVecinos(tamizaje.zonas, tamizaje.vecinos)}`, { size: 9.5, despues: 0.5 })
   parrafo(`Clientes: ${nombreCliente(tamizaje.clientes)}${tamizaje.clientesDetalle.trim() ? ` - ${tamizaje.clientesDetalle.trim()}` : ''}`, { size: 9.5, despues: 3 })
 
   parrafo(
