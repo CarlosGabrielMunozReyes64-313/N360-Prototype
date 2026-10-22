@@ -137,3 +137,15 @@
 
 /* La barra de sesión flotante se reemplazó por el top bar integrado en
    App.tsx (ver .header-cuenta / .sesion-tag en src/topbar.css). */
+
+/* reCAPTCHA v3 (AvisoRecaptcha.tsx): Google permite ocultar su insignia
+   flotante porque login y registro muestran este aviso con sus enlaces. */
+.grecaptcha-badge { visibility: hidden; }
+.auth-recaptcha {
+  margin: 18px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--nx-muted);
+}
+.auth-recaptcha a { color: inherit; text-decoration: underline; }
+.auth-recaptcha a:hover { color: var(--nx-dark); }

@@ -1,5 +1,6 @@
 import type { LoginPayload, RegistroPayload, SesionRespuesta } from './types'
 import { AuthError } from './types'
+import { RECAPTCHA_ACTIVO, cabeceraRecaptcha } from './recaptcha'
 
 /**
  * Base de la API del backend (N-360-Back, aún sin desarrollar).
@@ -51,13 +52,14 @@ async function parseError(res: Response): Promise<AuthError> {
     CUENTA_INACTIVA: 'Esta cuenta está inactiva. Contacta al administrador.',
     EMAIL_NO_VERIFICADO: 'Debes verificar tu correo antes de iniciar sesión.',
     VALIDACION: mensaje,
+    RECAPTCHA: mensaje,
   }
 
   const code = (codigo in mensajes ? codigo : 'DESCONOCIDO') as AuthError['code']
   return new AuthError(code, mensajes[codigo] ?? mensaje)
 }
 
-async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
+async function post<T>(path: string, body: unknown, token?: string, extra?: Record<string, string>): Promise<T> {
   let res: Response
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -65,6 +67,7 @@ async function post<T>(path: string, body: unknown, token?: string): Promise<T> 
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...extra,
       },
       body: JSON.stringify(body),
     })
@@ -92,12 +95,16 @@ async function patch<T>(path: string, body: unknown, token: string): Promise<T> 
   return res.json() as Promise<T>
 }
 
+/** Registro e inicio de sesión llevan el token de reCAPTCHA v3 (si está
+ * configurado) en la cabecera X-Recaptcha-Token; ver auth/recaptcha.ts. */
 export async function registrar(payload: RegistroPayload): Promise<SesionRespuesta> {
-  return post<SesionRespuesta>('/auth/register', payload)
+  const extra = RECAPTCHA_ACTIVO ? await cabeceraRecaptcha('registro') : undefined
+  return post<SesionRespuesta>('/auth/register', payload, undefined, extra)
 }
 
 export async function iniciarSesion(payload: LoginPayload): Promise<SesionRespuesta> {
-  return post<SesionRespuesta>('/auth/login', payload)
+  const extra = RECAPTCHA_ACTIVO ? await cabeceraRecaptcha('login') : undefined
+  return post<SesionRespuesta>('/auth/login', payload, undefined, extra)
 }
 
 export async function cerrarSesion(token: string): Promise<void> {

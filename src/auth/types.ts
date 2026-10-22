@@ -65,6 +65,8 @@ export type AuthErrorCode =
   | 'IA_LIMITE'
   /** Análisis inteligente: aún no hay empresa o autodiagnóstico guardados en el servidor. */
   | 'SIN_DIAGNOSTICO'
+  /** reCAPTCHA no confirmó que la solicitud la hace una persona (o no cargó). */
+  | 'RECAPTCHA'
   | 'DESCONOCIDO'
 
 export class AuthError extends Error {

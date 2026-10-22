@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { AvisoRecaptcha } from './AvisoRecaptcha'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -81,6 +82,7 @@ export function Login({ onIrARegistro }: Props) {
               <button type="button" onClick={onIrARegistro}>Regístrate</button>
             </div>
           </div>
+          <AvisoRecaptcha />
         </form>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { POLITICA_DATOS } from '../data/politicaDatos'
 import { PoliticaDatos } from './PoliticaDatos'
+import { AvisoRecaptcha } from './AvisoRecaptcha'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASS_MIN = 8
@@ -155,6 +156,7 @@ export function Register({ onIrALogin, onSuccess }: Props) {
               <button type="button" onClick={onIrALogin}>Inicia sesión</button>
             </div>
           </div>
+          <AvisoRecaptcha />
         </form>
       </div>
       {verPolitica && <PoliticaDatos onCerrar={() => setVerPolitica(false)} />}
