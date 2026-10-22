@@ -152,12 +152,65 @@
 .lp-fill--alto { background: var(--nx-mid); }
 .lp-fill--medio { background: var(--nx-gold); }
 .lp-fill--bajo { background: var(--nx-alert); }
-.lp-sample-foot {
-  margin: 20px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--nx-muted);
+
+/* personaje que presenta el mapa: se para delante de la esquina inferior
+   izquierda de la tarjeta, la señala y «dice» la aclaración del ejemplo */
+.lp-show { position: relative; }
+.lp-show .lp-sample { padding-bottom: 34px; }
+
+.lp-guide {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: -30px;           /* la cabeza se monta sobre el borde de la tarjeta */
+  padding-left: 6px;
+}
+.lp-guide-img {
+  flex: none;
+  width: 160px;
+  height: auto;
+  filter: drop-shadow(0 10px 14px rgba(2, 64, 41, .14));
+  animation: lp-asoma .7s cubic-bezier(.2, .9, .3, 1.15) .25s both;
+  transform-origin: 50% 100%;
+}
+.lp-guide-bubble {
+  position: relative;
+  margin: 28px 0 0 4px;        /* a la altura de la mano que señala */
+  max-width: 34ch;
+  padding: 12px 15px;
+  background: var(--nx-light);
+  border: 1px solid #cfe6da;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nx-dark);
+  animation: lp-dice .4s ease-out .8s both;
+}
+/* colita del globo, apuntando al personaje */
+.lp-guide-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-top: -6.5px;
+  background: inherit;
+  border-left: 1px solid #cfe6da;
+  border-bottom: 1px solid #cfe6da;
+  border-bottom-left-radius: 3px;
+  transform: rotate(45deg);
+}
+
+@keyframes lp-asoma {
+  from { opacity: 0; transform: translateY(22px) rotate(-5deg); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes lp-dice {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ---------------------------------------------------------- secciones */
@@ -263,8 +316,11 @@
   .lp-sec { padding: 48px 0; }
   .lp-bar-in { height: 60px; }
   .lp-bar-acc .lp-btn-ghost { display: none; }
+  .lp-guide-img { width: 124px; }
+  .lp-guide { margin-top: -24px; padding-left: 0; }
+  .lp-show .lp-sample { padding-bottom: 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp * { transition: none !important; }
+  .lp * { transition: none !important; animation: none !important; }
 }

@@ -7,6 +7,7 @@ import {
 } from '../perfil/recorte'
 import type { Dimensiones, Encuadre } from '../perfil/recorte'
 import { IconoGirar, IconoMas, IconoMenos } from './Iconos'
+import { IconoCarga } from './IconoCarga'
 
 interface Props {
   /** Imagen a ajustar: un archivo recién elegido o la foto actual. */
@@ -267,7 +268,11 @@ export function EditorFoto({ fuente, onCancelar, onGuardar }: Props) {
               />
             </div>
           )}
-          {!imagen && !errorCarga && <div className="editor-foto-estado">Cargando…</div>}
+          {!imagen && !errorCarga && (
+            <div className="editor-foto-estado" role="status">
+              <span className="cargando"><IconoCarga tamano={28} /> Cargando…</span>
+            </div>
+          )}
           <div className="editor-foto-guia" aria-hidden="true" />
           <div className="editor-foto-mascara" aria-hidden="true" />
         </div>

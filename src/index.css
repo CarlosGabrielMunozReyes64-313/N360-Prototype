@@ -325,6 +325,12 @@ main { max-width: var(--wrap); margin: 0 auto; padding: 34px 24px 80px; }
   .seg { width: 46px; }
 }
 
+/* Ícono de carga (components/IconoCarga.tsx) y su texto, en una línea. */
+.icono-carga { display: inline-flex; flex: none; }
+.icono-carga img { display: block; }
+.cargando { display: flex; align-items: center; gap: 10px; }
+.tabla-vacia.cargando { justify-content: center; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
   html { scroll-behavior: auto; }

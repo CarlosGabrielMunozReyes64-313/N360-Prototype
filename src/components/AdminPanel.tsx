@@ -7,6 +7,7 @@ import * as adminApi from '../auth/adminApi'
 import { EstadisticasTab } from './EstadisticasTab'
 import { EmpresasTab } from './EmpresasTab'
 import { Avatar } from './Avatar'
+import { IconoCarga } from './IconoCarga'
 import type {
   UsuarioAdmin, ResumenSesiones, ActividadUsuario, MotivoCierre,
 } from '../auth/adminApi'
@@ -131,7 +132,7 @@ function TablaUsuarios({ token, adminId }: { token: string; adminId: string }) {
         {error && <div className="auth-error" role="alert">{error}</div>}
 
         {cargando ? (
-          <p className="tabla-vacia">Cargando usuarios…</p>
+          <p className="tabla-vacia cargando" role="status"><IconoCarga tamano={28} /> Cargando usuarios…</p>
         ) : visibles.length === 0 ? (
           <p className="tabla-vacia">No hay usuarios que coincidan.</p>
         ) : (
@@ -583,7 +584,7 @@ function PestanaActividad({ token }: { token: string }) {
       {error && <div className="auth-error" role="alert">{error}</div>}
 
       {cargando ? (
-        <p className="tabla-vacia">Cargando actividad…</p>
+        <p className="tabla-vacia cargando" role="status"><IconoCarga tamano={28} /> Cargando actividad…</p>
       ) : visibles.length === 0 ? (
         <p className="tabla-vacia">No hay usuarios que coincidan.</p>
       ) : (
@@ -671,7 +672,7 @@ function VistaActividad({
       setError(e instanceof AuthError ? e.message : 'No se pudo revocar la sesión.'))
   }
 
-  if (cargando) return <p className="lede">Cargando actividad…</p>
+  if (cargando) return <p className="lede cargando" role="status"><IconoCarga tamano={32} /> Cargando actividad…</p>
   if (error) return (
     <>
       <button type="button" className="btn-volver" onClick={onVolver}>← Volver a la lista</button>

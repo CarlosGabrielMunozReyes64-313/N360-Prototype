@@ -2,6 +2,7 @@ import type { AccionIA, AnalisisIAGuardado, PrioridadIA } from '../types'
 import { RSE_EXPRESS } from '../data/rseExpress'
 import { CATEGORIAS } from '../data/escala'
 import type { EstadoAnalisisIA } from '../hooks/useAnalisisIA'
+import { IconoCarga } from './IconoCarga'
 
 interface Props {
   estado: EstadoAnalisisIA
@@ -123,7 +124,7 @@ export function AnalisisInteligente({ estado, onReintentar }: Props) {
 
       {estado.tipo === 'cargando' && (
         <div className="note rse-ia-cargando" role="status" aria-live="polite">
-          <span className="rse-ia-spinner" aria-hidden="true" />
+          <IconoCarga tamano={44} />
           <div>
             <strong>Analizando resultados…</strong>{' '}
             Puede tardar hasta un minuto y medio. Mientras tanto puede seguir revisando su mapa o descargar el informe.

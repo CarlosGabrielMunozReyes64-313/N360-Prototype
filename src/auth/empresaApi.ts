@@ -182,7 +182,7 @@ export function payloadDiagnostico(d: Diagnostico, p: Priorizacion, completo: bo
 
 /* ------------------------------------------------------------ llamadas */
 
-async function parseError(res: Response): Promise<AuthError> {
+export async function parseError(res: Response): Promise<AuthError> {
   let codigo = 'DESCONOCIDO'
   let mensaje = 'No se pudo completar la operación.'
   try {

@@ -10,6 +10,7 @@ import {
   tamizajeDesdeApi,
 } from "../auth/empresaApi";
 import { AuthError } from "../auth/types";
+import { IconoCarga } from "./IconoCarga";
 import type { RangoIngresos, SectorId, Tamano, TipoCliente } from "../types";
 import { RSE_EXPRESS } from "../data/rseExpress";
 import { ETAPAS, clasificar, etiquetaEtapa } from "../data/escala";
@@ -428,7 +429,7 @@ function FichaEmpresa({
             </p>
           )}
           {!datos && !error && (
-            <p className="detalle-vacio">Cargando respuestas…</p>
+            <p className="detalle-vacio cargando" role="status"><IconoCarga tamano={22} /> Cargando respuestas…</p>
           )}
           {datos && !diag && (
             <p className="detalle-vacio">Todavía no hay respuestas.</p>
@@ -709,7 +710,7 @@ export function EmpresasTab({ token }: { token: string }) {
       )}
 
       {cargando ? (
-        <p className="tabla-vacia">Cargando empresas…</p>
+        <p className="tabla-vacia cargando" role="status"><IconoCarga tamano={28} /> Cargando empresas…</p>
       ) : empresas.length === 0 ? (
         <p className="tabla-vacia">Todavía no hay empresas registradas.</p>
       ) : visibles.length === 0 ? (

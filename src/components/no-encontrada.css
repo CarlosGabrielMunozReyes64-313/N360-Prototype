@@ -1,0 +1,99 @@
+/* Pantalla de error 404 (NoEncontrada.tsx). Usa las variables --nx-* y las
+   fuentes de index.css; el logo trae su tamaño de landing.css (.lp-logo). */
+
+.nf {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nx-gray);
+  color: var(--nx-text);
+  font-family: var(--body);
+}
+
+.nf-bar {
+  display: flex;
+  align-items: center;
+  height: 68px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+.nf-marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--nx-dark);
+}
+
+.nf-cuerpo {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px 64px;
+}
+.nf-contenido {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  max-width: 760px;
+}
+
+/* El personaje señala hacia el texto. */
+.nf-mascota {
+  flex: none;
+  width: 200px;
+  height: auto;
+  filter: drop-shadow(0 14px 20px rgba(2, 64, 41, .14));
+}
+
+.nf-codigo {
+  margin: 0 0 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--nx-mid);
+}
+.nf-titulo {
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--nx-dark);
+}
+.nf-lead {
+  margin: 0 0 28px;
+  max-width: 46ch;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--nx-muted);
+}
+
+.nf-acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+.nf-btn {
+  padding: 13px 26px;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.nf-btn-primario { background: var(--nx-mid); color: #fff; }
+.nf-btn-primario:hover { background: var(--nx-dark); }
+.nf-btn-secundario { background: transparent; color: var(--nx-dark); border-color: var(--border-strong); }
+.nf-btn-secundario:hover { border-color: var(--nx-mid); color: var(--nx-mid); }
+
+@media (max-width: 640px) {
+  .nf-contenido { flex-direction: column; text-align: center; gap: 24px; }
+  .nf-mascota { width: 150px; }
+  .nf-lead { margin-left: auto; margin-right: auto; }
+  .nf-acciones { justify-content: center; }
+}

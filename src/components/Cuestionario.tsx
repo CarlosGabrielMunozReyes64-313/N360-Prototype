@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Diagnostico, Etapa, Instrumento, Materia, Pregunta, RespuestaPregunta, Tamizaje } from '../types'
 import { ETAPAS, etiquetaEtapa } from '../data/escala'
 import { describeAlgo, materiasFuera, preguntaCompleta, progreso } from '../engine/scoring'
@@ -19,6 +19,9 @@ interface Props {
   onSalir: () => void
   /** Solo se pasa cuando ya se puede ver el resultado. */
   onResultados?: () => void
+  /** Avisa qué materia está abierta («01»…«07», o null en «Para terminar»).
+   * La usa el asistente para entender «esta pregunta». */
+  onMateria?: (numero: string | null) => void
 }
 
 /**
@@ -31,7 +34,7 @@ interface Props {
  */
 export function Cuestionario({
   instrumento, diagnostico, tamizaje, materiaInicial = 0,
-  onRespuesta, onFortalecer, onComentario, onSalir, onResultados,
+  onRespuesta, onFortalecer, onComentario, onSalir, onResultados, onMateria,
 }: Props) {
   const fuera = materiasFuera(instrumento, tamizaje)
   const visibles = instrumento.materias.filter((m) => !fuera.has(m.id))
@@ -43,6 +46,8 @@ export function Cuestionario({
 
   const ir = (i: number) => { setActual(i); window.scrollTo(0, 0) }
   const materia = actual < FINAL ? visibles[actual] : null
+  const numeroMateria = materia?.numero ?? null
+  useEffect(() => { onMateria?.(numeroMateria) }, [numeroMateria, onMateria])
 
   return (
     <section className="card">

@@ -47,6 +47,10 @@ src/
   components/Cuestionario  preguntas abiertas, ejemplos, «algo diferente», etapa
   components/Resultados    mapa de prácticas, fortalezas, matriz de priorización
   components/AnalisisInteligente  sección «Análisis inteligente» de Resultados
+  components/AsistenteChat  asistente flotante (chatbot del personaje)
+  components/IconoCarga    ícono de carga (GIF) de todas las pantallas de carga
+  components/NoEncontrada  página de error 404
+  auth/asistenteApi.ts     POST /asistente/mensajes con la respuesta por partes
   data/politicaDatos.ts    Política de Tratamiento de Datos Personales (texto y versión)
   components/PoliticaDatos diálogo para leer la política desde el registro
   components/EmpresasTab   ficha de empresa del admin: respuestas y clasificación
@@ -121,6 +125,62 @@ Configuración de la clave, migración y detalles: README del backend,
 sección «Análisis inteligente con Gemini (010)». Pruebas:
 `pruebas/analisis-ia.test.tsx` (resultados altos, bajos y mixtos, carga,
 error, reintento, sin clave, sin sesión, PDF con y sin IA).
+
+## Asistente (chatbot del personaje)
+
+Solo para cuentas `empresa`. El personaje (cabeza de la mascota) queda en la
+esquina inferior derecha en todos los pasos y en Configuración; al pasar el
+cursor muestra «¿Dudas con la encuesta? Pregúntame» y al hacer clic abre la
+ventana del chat, que empieza con «¿En qué puedo ayudarte?» y sugiere tres
+preguntas según el paso en que esté la persona.
+
+- **El personaje habla** (alterna `asistente-boca-abierta.webp` y
+  `asistente-boca-cerrada.webp`) al abrir la ventana, mientras dice el
+  saludo, y mientras la IA procesa y escribe la respuesta, hasta que llega
+  completa (evento `fin` del backend) y termina de mostrarse. En reposo queda
+  con la boca cerrada. Las dos imágenes son idénticas salvo la boca y quedan
+  cargadas a la vez, así que alternar no parpadea. Con «reducir movimiento»
+  activado en el sistema no alterna: muestra la boca abierta mientras habla.
+- La respuesta llega por partes (NDJSON) y se muestra letra a letra. Si se
+  cierra la ventana a mitad, la respuesta sigue llegando y el personaje sigue
+  hablando hasta terminar; al reabrir, la conversación sigue ahí (se borra al
+  cerrar sesión o recargar).
+- Contexto: el asistente recibe el paso y, en el cuestionario, el número de
+  la materia abierta (`Cuestionario` lo avisa con `onMateria`), para entender
+  «esta pregunta». No recibe las respuestas del diagnóstico ni los datos de
+  la empresa.
+- Errores: un aviso en el chat con «Reintentar» cuando tiene sentido (sin red,
+  Gemini caído); sin botón cuando no (tope por hora, sin clave en el servidor,
+  sesión vencida).
+- Teclado: Enter envía, Mayús + Enter salta de línea, Escape cierra y devuelve
+  el foco al personaje.
+
+La base de conocimiento del asistente vive en el backend y se genera desde
+`src/data/` con `node scripts/generar-conocimiento-asistente.mjs <ruta al
+backend>/app/ia/asistente_conocimiento.py`. Hay que correrlo cada vez que
+cambie una pregunta, una opción o una ayuda del tamizaje o del
+autodiagnóstico. Detalles y contrato: README del backend, sección «Asistente
+de la empresa (chatbot)».
+
+## Ícono de carga y página 404
+
+- **Carga:** todas las pantallas y avisos de carga usan el mismo GIF
+  (`src/assets/cargando.gif`, 160 px, 8 cuadros) con `<IconoCarga tamano={…} />`:
+  la validación de la sesión, «Cargando los datos de su empresa…», el
+  «Analizando resultados…» del análisis inteligente, el asistente mientras
+  procesa, el editor de la foto de perfil y las listas del panel de admin. El
+  ícono siempre va junto a un texto que dice qué carga. Con «reducir
+  movimiento» activado se muestra un cuadro fijo (`cargando-quieto.png`). Los
+  botones que cambian su texto mientras trabajan («Generando…», «Guardando…»)
+  no llevan ícono.
+- **404:** `AuthGate` muestra `NoEncontrada` cuando la dirección no es la raíz
+  de la app (`/algo`) o el hash no es una pantalla conocida (`#/algo`). Desde
+  ahí, «Ir al inicio» lleva a la landing o, con sesión abierta, al diagnóstico
+  (o al panel de admin); sin sesión también ofrece «Iniciar sesión». En
+  `npm run dev` y `npm run preview` funciona tal cual. En el hosting, las rutas
+  como `/algo` deben devolver `index.html` (reescritura de SPA; en Vercel, una
+  regla `rewrites` hacia `/index.html`) para que se vea esta página y no la
+  404 del servidor.
 
 ## Política de tratamiento de datos en el registro
 

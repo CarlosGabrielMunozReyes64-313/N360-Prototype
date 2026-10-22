@@ -1,4 +1,5 @@
 import './landing.css'
+import mascota from '../assets/mascota-nexus.webp'
 
 interface Props {
   onCrearCuenta: () => void
@@ -57,38 +58,51 @@ export function Landing({ onCrearCuenta, onIniciarSesion }: Props) {
             </p>
           </div>
 
-          {/* muestra del informe */}
-          <div
-            className="lp-sample"
-            role="img"
-            aria-label="Ejemplo de mapa de prácticas por materia"
-          >
-            <div className="lp-sample-head">
-              <div>
-                <h3>Mapa de ejemplo</h3>
-                <p>Empresa pequeña · 24 personas · servicios</p>
+          {/* muestra del informe, presentada por el personaje */}
+          <div className="lp-show">
+            <div
+              className="lp-sample"
+              role="img"
+              aria-label="Ejemplo de mapa de prácticas por materia"
+            >
+              <div className="lp-sample-head">
+                <div>
+                  <h3>Mapa de ejemplo</h3>
+                  <p>Empresa pequeña · 24 personas · servicios</p>
+                </div>
+                <div className="lp-score">
+                  <b>11</b>
+                  <span>prácticas que ya realiza</span>
+                </div>
               </div>
-              <div className="lp-score">
-                <b>11</b>
-                <span>prácticas que ya realiza</span>
-              </div>
+
+              {BARRAS.map((b) => (
+                <div className="lp-row" key={b.area}>
+                  <div className="lp-row-top">
+                    <span>{b.area}</span>
+                    <span>{b.etiqueta}</span>
+                  </div>
+                  <div className="lp-track">
+                    <i className={`lp-fill lp-fill--${nivel(b.valor)}`} style={{ width: `${b.valor}%` }} />
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {BARRAS.map((b) => (
-              <div className="lp-row" key={b.area}>
-                <div className="lp-row-top">
-                  <span>{b.area}</span>
-                  <span>{b.etiqueta}</span>
-                </div>
-                <div className="lp-track">
-                  <i className={`lp-fill lp-fill--${nivel(b.valor)}`} style={{ width: `${b.valor}%` }} />
-                </div>
-              </div>
-            ))}
-
-            <p className="lp-sample-foot">
-              Datos de ejemplo. Tu mapa se construye con lo que cuentas de tu empresa; no es un puntaje de cumplimiento.
-            </p>
+            {/* el personaje señala el mapa y aclara que es un ejemplo */}
+            <div className="lp-guide">
+              <img
+                className="lp-guide-img"
+                src={mascota}
+                alt=""
+                width={332}
+                height={440}
+                decoding="async"
+              />
+              <p className="lp-guide-bubble">
+                Datos de ejemplo. Tu mapa se construye con lo que cuentas de tu empresa; no es un puntaje de cumplimiento.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -267,7 +281,7 @@ const ENTREGA = [
 
 /* ------------------------------------------------------------ logo */
 
-function LogoN360() {
+export function LogoN360() {
   return (
     <svg viewBox="0 0 200 200" className="lp-logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
       <polygon

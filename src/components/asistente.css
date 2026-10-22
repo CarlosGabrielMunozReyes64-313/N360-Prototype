@@ -1,0 +1,417 @@
+/* Asistente flotante de la empresa (AsistenteChat.tsx), en la esquina
+   inferior izquierda.
+   Usa las variables --nx-* y las fuentes de index.css. Las clases van
+   prefijadas con .asis- para no chocar con las de la app. Queda por debajo
+   de los diálogos (z-index 60) y de los globos de ayuda (1000). */
+
+.asis {
+  --asis-lado: 64px;
+  --asis-margen: 20px;
+  --asis-abajo: calc(var(--asis-margen) + env(safe-area-inset-bottom, 0px));
+  position: fixed;
+  left: calc(var(--asis-margen) + env(safe-area-inset-left, 0px));
+  bottom: var(--asis-abajo);
+  z-index: 50;
+  font-family: var(--body);
+}
+
+/* El personaje flotante no debe tapar el final de la página. */
+.app-footer {
+  padding-bottom: 110px;
+}
+
+/* ---------------------------------------------------------- personaje */
+.asis-lanzador {
+  position: relative;
+  display: block;
+  width: var(--asis-lado);
+  height: var(--asis-lado);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 8px 14px rgba(2, 64, 41, 0.22));
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease;
+}
+.asis-lanzador:hover,
+.asis-lanzador:focus-visible {
+  transform: translateY(-3px) scale(1.06);
+  filter: drop-shadow(0 12px 18px rgba(2, 64, 41, 0.28));
+}
+.asis-lanzador:active {
+  transform: translateY(0) scale(0.97);
+}
+.asis-lanzador:focus-visible {
+  outline: 3px solid var(--nx-mid);
+  outline-offset: 3px;
+}
+
+.asis-cara {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.asis-cara img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.asis-cara img.is-oculta {
+  visibility: hidden;
+}
+
+/* Etiqueta al pasar el cursor (solo con la ventana cerrada). */
+.asis-etiqueta {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  translate: 0 -50%;
+  white-space: nowrap;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--nx-dark);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.asis-etiqueta::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: inherit;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+.asis-lanzador:hover .asis-etiqueta,
+.asis-lanzador:focus-visible .asis-etiqueta {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------------------------------------------------------- ventana */
+.asis-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--asis-lado) + 14px);
+  width: 372px;
+  max-width: calc(100vw - 2 * var(--asis-margen));
+  height: min(
+    560px,
+    calc(100dvh - var(--asis-lado) - 3 * var(--asis-margen) - 14px)
+  );
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 60px rgba(2, 64, 41, 0.18),
+    0 2px 6px rgba(2, 64, 41, 0.06);
+  transform-origin: 32px 100%;
+  animation: asis-abre 0.18s ease-out both;
+}
+/* Colita que apunta al personaje: la ventana es lo que él dice. */
+.asis-panel::after {
+  content: "";
+  position: absolute;
+  left: 25px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-bottom-right-radius: 3px;
+  transform: rotate(45deg);
+}
+
+@keyframes asis-abre {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.asis-cab {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.asis-titulo {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--nx-dark);
+}
+.asis-sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--nx-muted);
+}
+.asis-cerrar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  margin: -4px -4px 0 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nx-muted);
+  cursor: pointer;
+}
+.asis-cerrar:hover {
+  background: var(--nx-gray);
+  color: var(--nx-dark);
+}
+.asis-cerrar svg,
+.asis-enviar svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------------------------------------------------------- mensajes */
+.asis-mensajes {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--nx-gray);
+}
+
+.asis-msg {
+  max-width: 86%;
+  margin: 0;
+  padding: 10px 13px;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.asis-msg--bot {
+  align-self: flex-start;
+  background: #fff;
+  color: var(--nx-text);
+  border: 1px solid var(--border);
+  border-radius: 4px 14px 14px 14px;
+}
+.asis-msg--yo {
+  align-self: flex-end;
+  background: var(--nx-dark);
+  color: #fff;
+  border-radius: 14px 4px 14px 14px;
+  white-space: pre-wrap;
+}
+.asis-msg--error {
+  background: #fbf1ef;
+  border-color: #efd3cf;
+  color: #7c2620;
+}
+.asis-msg p {
+  margin: 0;
+}
+.asis-msg p + p,
+.asis-msg p + ul,
+.asis-msg ul + p {
+  margin-top: 8px;
+}
+.asis-msg ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.asis-msg li + li {
+  margin-top: 4px;
+}
+.asis-msg strong {
+  font-weight: 600;
+  color: var(--nx-dark);
+}
+.asis-msg--error strong {
+  color: inherit;
+}
+
+.asis-reintentar {
+  margin-top: 8px;
+  padding: 5px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.asis-reintentar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Ícono de carga mientras la IA procesa la pregunta. */
+.asis-pensando {
+  padding: 8px 12px;
+}
+
+/* ---------------------------------------------------------- sugerencias */
+.asis-sugerencias {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 2px;
+}
+.asis-sugerencia {
+  padding: 7px 12px;
+  border: 1px solid #b9dccd;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--nx-dark);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.asis-sugerencia:hover {
+  border-color: var(--nx-mid);
+  background: var(--nx-light);
+}
+
+/* ---------------------------------------------------------- escribir */
+.asis-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 12px 6px;
+  border-top: 1px solid var(--border);
+}
+.asis-campo {
+  flex: 1;
+  min-height: 42px;
+  max-height: 120px;
+  field-sizing: content;
+  resize: none;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--nx-text);
+  background: #fff;
+}
+.asis-campo:focus {
+  outline: none;
+  border-color: var(--nx-mid);
+  box-shadow: 0 0 0 3px rgba(4, 169, 122, 0.15);
+}
+.asis-campo::placeholder {
+  color: #8a9c94;
+}
+
+.asis-enviar {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: var(--nx-dark);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.asis-enviar:hover:not(:disabled) {
+  background: var(--nx-mid);
+}
+.asis-enviar:disabled {
+  background: var(--border-strong);
+  cursor: not-allowed;
+}
+
+.asis-nota {
+  margin: 0;
+  padding: 0 14px 12px;
+  font-size: 11.5px;
+  color: var(--nx-muted);
+}
+
+.asis-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- móvil */
+@media (max-width: 520px) {
+  .asis {
+    --asis-lado: 56px;
+    --asis-margen: 14px;
+  }
+  .asis-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(var(--asis-abajo) + var(--asis-lado) + 12px);
+    width: auto;
+    max-width: none;
+    height: min(
+      560px,
+      calc(100dvh - var(--asis-lado) - 48px - env(safe-area-inset-bottom, 0px))
+    );
+  }
+  .asis-etiqueta {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asis-panel {
+    animation: none;
+  }
+  .asis-lanzador,
+  .asis-etiqueta,
+  .asis-sugerencia {
+    transition: none;
+  }
+}

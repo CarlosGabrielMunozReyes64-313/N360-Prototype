@@ -5,6 +5,7 @@ import { AuthError } from '../auth/types'
 import { useAuth } from '../auth/AuthContext'
 import { PanelGraficas } from './PanelGraficas'
 import { IconoDescarga } from './Iconos'
+import { IconoCarga } from './IconoCarga'
 import {
   construirSecciones, seccionesConDatos, selloArchivo, selloFecha, totalBarras,
 } from '../engine/agregados'
@@ -133,7 +134,7 @@ export function EstadisticasTab({ token }: { token: string }) {
     }
   }
 
-  if (cargando) return <p className="lede">Cargando estadísticas…</p>
+  if (cargando) return <p className="lede cargando" role="status"><IconoCarga tamano={32} /> Cargando estadísticas…</p>
   if (error) return <div className="auth-error" role="alert">{error}</div>
   if (!stats) return null
 

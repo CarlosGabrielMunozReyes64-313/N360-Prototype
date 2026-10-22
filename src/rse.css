@@ -201,14 +201,9 @@
 .rse-ia-horizonte { font-family: var(--mono); font-size: 12px; color: var(--nx-muted) !important; }
 .rse-ia-conclusion { margin-top: 0; }
 .rse-ia-pie { font-size: 12px; color: var(--nx-muted); margin: 14px 0 0; }
-.rse-ia-cargando { display: flex; gap: 12px; align-items: center; }
-.rse-ia-spinner {
-  width: 18px; height: 18px; flex-shrink: 0; border-radius: 50%;
-  border: 2px solid var(--border-strong); border-top-color: var(--nx-mid);
-  animation: rse-ia-girar 0.9s linear infinite;
-}
-/* Con movimiento reducido, index.css detiene el giro; el texto sigue diciendo que carga. */
-@keyframes rse-ia-girar { to { transform: rotate(360deg); } }
+.rse-ia-cargando { display: flex; gap: 14px; align-items: center; }
+/* El ícono de carga es components/IconoCarga.tsx; con movimiento reducido
+   muestra un cuadro fijo y el texto sigue diciendo que carga. */
 .rse-ia-error { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .rse-descarga { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
 .rse-descarga .hint { font-size: 12px; color: var(--nx-muted); max-width: 36ch; text-align: right; }

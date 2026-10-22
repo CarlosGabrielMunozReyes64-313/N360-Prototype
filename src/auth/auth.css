@@ -86,6 +86,8 @@
 .auth-loading {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
+  gap: 14px;
   align-items: center;
   justify-content: center;
   color: var(--nx-muted);

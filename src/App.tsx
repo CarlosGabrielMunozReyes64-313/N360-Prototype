@@ -18,6 +18,9 @@ import { Cuestionario } from './components/Cuestionario'
 import { Resultados } from './components/Resultados'
 import { EditarDatosPage } from './components/EditarDatosPage'
 import { MenuCuenta } from './components/MenuCuenta'
+import { AsistenteChat } from './components/AsistenteChat'
+import { IconoCarga } from './components/IconoCarga'
+import type { ContextoAsistente, PasoAsistente } from './auth/asistenteApi'
 import { useAuth } from './auth/AuthContext'
 import {
   diagnosticoDesdeApi, guardarDiagnostico, guardarEmpresa, obtenerMiEmpresa, payloadDiagnostico,
@@ -28,6 +31,7 @@ import './topbar.css'
 import './rse.css'
 
 const PASOS = ['Perfil', 'Tamizaje', 'Autodiagnóstico', 'Resultados']
+const PASOS_ASISTENTE: PasoAsistente[] = ['perfil', 'tamizaje', 'autodiagnostico', 'resultados']
 
 const PERFIL_VACIO: Perfil = {
   razonSocial: '', nit: '', dv: '', sector: '',
@@ -83,6 +87,7 @@ export default function App({ usuario, onLogout }: Props) {
   const [editando, setEditando] = useState(false)
   const [historial, setHistorial] = useState<HistorialEntrada[]>(() => cargarHistorial(id))
   const [abierto, setAbierto] = useState<number | null>(null)
+  const [materiaVisible, setMateriaVisible] = useState<string | null>(null)
 
   // Lo que está en el backend manda: el perfil, el tamizaje vigente y el
   // autodiagnóstico. Si el backend no responde, se sigue con lo local.
@@ -184,16 +189,32 @@ export default function App({ usuario, onLogout }: Props) {
     setEditando(false)
   }
 
+  // Dónde está la persona: el asistente lo usa para entender «esta pregunta».
+  const enCuestionario = paso === 2 && abierto !== null
+  const contextoAsistente: ContextoAsistente = {
+    paso: editando ? 'configuracion' : enCuestionario ? 'cuestionario' : PASOS_ASISTENTE[paso] ?? null,
+    materia: !editando && enCuestionario ? materiaVisible : null,
+  }
+  // Solo las cuentas de empresa ven el asistente (las admin ni llegan a App).
+  // La misma `key` en las dos vistas (edición y flujo) conserva la
+  // conversación al pasar de una a otra.
+  const asistente = usuario.rol === 'empresa' && token
+    ? <AsistenteChat key="asistente" token={token} contexto={contextoAsistente} />
+    : null
+
   if (editando) {
     return (
-      <EditarDatosPage
-        perfil={perfil}
-        tamizaje={tamizaje}
-        historial={historial}
-        puedeEditarDatos={completadoUnaVez}
-        onEnviar={guardarEdicion}
-        onVolver={() => setEditando(false)}
-      />
+      <>
+        <EditarDatosPage
+          perfil={perfil}
+          tamizaje={tamizaje}
+          historial={historial}
+          puedeEditarDatos={completadoUnaVez}
+          onEnviar={guardarEdicion}
+          onVolver={() => setEditando(false)}
+        />
+        {asistente}
+      </>
     )
   }
 
@@ -243,7 +264,9 @@ export default function App({ usuario, onLogout }: Props) {
         )}
 
         {!hidratado && (
-          <section className="card"><p className="lede">Cargando los datos de su empresa…</p></section>
+          <section className="card" role="status">
+            <p className="lede cargando"><IconoCarga tamano={32} /> Cargando los datos de su empresa…</p>
+          </section>
         )}
 
         {hidratado && paso === 0 && (
@@ -276,6 +299,7 @@ export default function App({ usuario, onLogout }: Props) {
             onComentario={escribirComentario}
             onSalir={() => { setAbierto(null); window.scrollTo(0, 0) }}
             onResultados={prog.completo ? () => ir(3) : undefined}
+            onMateria={setMateriaVisible}
           />
         )}
 
@@ -293,6 +317,8 @@ export default function App({ usuario, onLogout }: Props) {
         Autodiagnóstico, no auditoría: no verifica cumplimiento legal ni constituye concepto
         jurídico. Sus respuestas se guardan en su cuenta a medida que avanza.
       </footer>
+
+      {asistente}
     </>
   )
 }
