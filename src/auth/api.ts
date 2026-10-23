@@ -32,6 +32,14 @@ export const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.rep
  *   GET {API_URL}/auth/me        (Authorization: Bearer <token>)
  *     200 -> { usuario: Usuario }
  *     401 -> token inválido/expirado/revocado
+ *
+ *   POST {API_URL}/auth/recuperar-password            body: { email }
+ *     202 -> { mensaje }   (siempre el mismo, exista o no la cuenta)
+ *     503 -> { codigo: 'CORREO_NO_CONFIGURADO' }
+ *   POST {API_URL}/auth/recuperar-password/verificar  body: { token }
+ *     200 -> { valido: boolean }
+ *   POST {API_URL}/auth/restablecer-password          body: { token, password_nueva }
+ *     204 | 400 { codigo: 'TOKEN_INVALIDO' } | 422 { codigo: 'VALIDACION' }
  */
 
 async function parseError(res: Response): Promise<AuthError> {
@@ -53,6 +61,8 @@ async function parseError(res: Response): Promise<AuthError> {
     EMAIL_NO_VERIFICADO: 'Debes verificar tu correo antes de iniciar sesión.',
     VALIDACION: mensaje,
     RECAPTCHA: mensaje,
+    TOKEN_INVALIDO: 'Este enlace ya no sirve: venció, ya se usó o pediste uno más reciente.',
+    CORREO_NO_CONFIGURADO: mensaje,
   }
 
   const code = (codigo in mensajes ? codigo : 'DESCONOCIDO') as AuthError['code']
@@ -149,6 +159,31 @@ export interface CambiarPasswordPayload {
 /** POST /auth/change-password — 204 sin cuerpo si sale bien. */
 export async function cambiarPassword(token: string, payload: CambiarPasswordPayload): Promise<void> {
   return post<void>('/auth/change-password', payload, token)
+}
+
+// ---------------------------------------------------------------------
+// Recuperación de contraseña por correo
+// ---------------------------------------------------------------------
+// El token del enlace viaja siempre en el CUERPO de la petición, nunca en
+// la URL de la API: así no queda en los logs de acceso del servidor.
+
+/** POST /auth/recuperar-password — 202 con el mismo mensaje exista o no la
+ * cuenta (el backend no revela qué correos están registrados). */
+export async function solicitarRecuperacion(email: string): Promise<{ mensaje: string }> {
+  const extra = RECAPTCHA_ACTIVO ? await cabeceraRecaptcha('recuperacion') : undefined
+  return post<{ mensaje: string }>('/auth/recuperar-password', { email }, undefined, extra)
+}
+
+/** POST /auth/recuperar-password/verificar — ¿el enlace sigue sirviendo? No lo gasta. */
+export async function verificarTokenRecuperacion(token: string): Promise<boolean> {
+  const res = await post<{ valido: boolean }>('/auth/recuperar-password/verificar', { token })
+  return res.valido === true
+}
+
+/** POST /auth/restablecer-password — 204. El backend cierra TODAS las
+ * sesiones de la cuenta; no inicia sesión: la persona entra por el login. */
+export async function restablecerPassword(token: string, passwordNueva: string): Promise<void> {
+  return post<void>('/auth/restablecer-password', { token, password_nueva: passwordNueva })
 }
 
 // ---------------------------------------------------------------------

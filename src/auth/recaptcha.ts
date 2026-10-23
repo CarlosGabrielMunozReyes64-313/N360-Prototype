@@ -1,14 +1,15 @@
 import { AuthError } from './types'
 
 /**
- * reCAPTCHA v3 para el registro y el inicio de sesión.
+ * reCAPTCHA v3 para el registro, el inicio de sesión y «¿Olvidaste tu contraseña?».
  *
  * Configuración: VITE_RECAPTCHA_SITE_KEY en el .env del front (la clave del
  * SITIO, que es pública). La clave secreta va solo en el .env del backend
  * (RECAPTCHA_SECRET_KEY), que es quien verifica el token con Google.
  * Sin VITE_RECAPTCHA_SITE_KEY todo funciona igual que antes, sin reCAPTCHA.
  *
- * - El script de Google se carga solo en las pantallas de login y registro
+ * - El script de Google se carga solo en las pantallas de login, registro y
+ *   recuperación de contraseña
  *   (AvisoRecaptcha lo precarga al montarse), no en el resto de la app.
  * - El token se pide justo al enviar el formulario: dura dos minutos y sirve
  *   una sola vez. Viaja en la cabecera X-Recaptcha-Token.
@@ -16,7 +17,7 @@ import { AuthError } from './types'
  *   pantallas muestran el aviso de reCAPTCHA que Google exige en ese caso.
  */
 
-export type AccionRecaptcha = 'registro' | 'login'
+export type AccionRecaptcha = 'registro' | 'login' | 'recuperacion'
 
 interface Grecaptcha {
   ready(alListo: () => void): void

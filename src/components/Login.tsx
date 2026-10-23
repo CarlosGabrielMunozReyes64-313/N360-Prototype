@@ -6,9 +6,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface Props {
   onIrARegistro: () => void
+  /** «¿Olvidaste tu contraseña?» — recibe el correo ya escrito, si hay. */
+  onOlvidePassword?: (email: string) => void
 }
 
-export function Login({ onIrARegistro }: Props) {
+export function Login({ onIrARegistro, onOlvidePassword }: Props) {
   const { login, error, limpiarError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -71,6 +73,15 @@ export function Login({ onIrARegistro }: Props) {
               onChange={(e) => { setPassword(e.target.value); limpiarError() }}
               placeholder="••••••••"
             />
+            {onOlvidePassword && (
+              <button
+                type="button"
+                className="auth-olvido"
+                onClick={() => onOlvidePassword(emailValido ? email.trim().toLowerCase() : '')}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            )}
           </div>
 
           <div className="auth-actions">

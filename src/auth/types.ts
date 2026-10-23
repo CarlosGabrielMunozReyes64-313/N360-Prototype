@@ -67,6 +67,10 @@ export type AuthErrorCode =
   | 'SIN_DIAGNOSTICO'
   /** reCAPTCHA no confirmó que la solicitud la hace una persona (o no cargó). */
   | 'RECAPTCHA'
+  /** Recuperación de contraseña: el enlace del correo venció, ya se usó o fue reemplazado. */
+  | 'TOKEN_INVALIDO'
+  /** Recuperación de contraseña: el backend no tiene configurado el envío de correos. */
+  | 'CORREO_NO_CONFIGURADO'
   | 'DESCONOCIDO'
 
 export class AuthError extends Error {

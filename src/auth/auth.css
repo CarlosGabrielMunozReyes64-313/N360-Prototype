@@ -48,6 +48,26 @@
 }
 .auth-hint { font-size: 11.5px; color: var(--nx-muted); }
 
+/* ------------------------------------- recuperación de contraseña por correo */
+.auth-olvido {
+  align-self: flex-end;
+  border: 0; background: none; padding: 2px 0; margin-top: 2px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--nx-mid); cursor: pointer;
+}
+.auth-olvido:hover { text-decoration: underline; }
+.auth-olvido:focus-visible { outline: 2px solid var(--nx-mid); outline-offset: 2px; }
+.auth-ok {
+  background: var(--nx-light);
+  border: 1px solid var(--nx-mid);
+  color: var(--nx-dark);
+  font-size: 13.5px; line-height: 1.5;
+  border-radius: 7px;
+  padding: 12px 14px;
+  margin: 14px 0 12px;
+}
+.auth-parrafo { display: block; line-height: 1.5; margin: 0; }
+
 .auth-error {
   background: #fbebe9;
   border: 1px solid var(--nx-alert);

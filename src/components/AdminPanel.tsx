@@ -522,6 +522,7 @@ const MOTIVO_CIERRE: Record<MotivoCierre, string> = {
   logout: 'el usuario cerró sesión',
   admin: 'revocada por un administrador',
   eliminacion: 'se eliminó la cuenta',
+  recuperacion: 'restableció su contraseña por correo',
 }
 
 /**

@@ -54,6 +54,9 @@ src/
   data/politicaDatos.ts    Política de Tratamiento de Datos Personales (texto y versión)
   components/PoliticaDatos diálogo para leer la política desde el registro
   components/EmpresasTab   ficha de empresa del admin: respuestas y clasificación
+  components/OlvidePassword      «¿Olvidaste tu contraseña?» (pide el correo)
+  components/RestablecerPassword pantalla del enlace del correo (contraseña nueva)
+  auth/enlaceRecuperacion.ts     lee el token de #/restablecer y lo borra de la URL
 pruebas/                   vitest (+ fast-check para las propiedades del motor)
 ```
 
@@ -197,6 +200,27 @@ vigencia. **Antes de producción:** completar `RESPONSABLE` con los datos
 legales reales (hoy se ven textos entre corchetes) y hacerlo revisar por el
 área jurídica. Si el texto cambia de fondo, subir `version` aquí y en el
 backend a la vez.
+
+## Recuperación de contraseña por correo
+
+En el login, «¿Olvidaste tu contraseña?» lleva a `#/recuperar` (con el correo
+ya escrito, si lo había). El backend envía un enlace
+`FRONTEND_URL/#/restablecer?token=…` y la pantalla de confirmación dice lo
+mismo exista o no la cuenta.
+
+Al abrir el enlace, `AuthGate` lee el token y **lo borra de inmediato** de la
+barra de direcciones y del historial (`replaceState`): no queda a la vista ni
+en «atrás». `RestablecerPassword` pregunta si el enlace sigue sirviendo antes
+de mostrar el formulario; si venció, ya se usó o se pidió otro más reciente,
+ofrece pedir uno nuevo. Tras el cambio el backend cierra todas las sesiones de
+la cuenta, así que si había una abierta en este navegador también se olvida, y
+la persona entra por el login con la contraseña nueva. El enlace se atiende
+aunque haya una sesión abierta. La pantalla del enlace no carga reCAPTCHA (el
+token ya es la prueba); la de pedir el enlace sí (acción `recuperacion`).
+
+Configuración, seguridad y cómo probarlo con Mailpit: ver el README del
+backend, sección «Recuperación de contraseña por correo (013)». Pruebas del
+front: `pruebas/recuperar-password.test.tsx`.
 
 ## Cuentas que venían del instrumento anterior
 

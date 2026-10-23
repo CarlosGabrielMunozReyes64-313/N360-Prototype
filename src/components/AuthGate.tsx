@@ -3,20 +3,24 @@ import { useAuth } from '../auth/AuthContext'
 import { Landing } from './Landing'
 import { Login } from './Login'
 import { Register } from './Register'
+import { OlvidePassword } from './OlvidePassword'
+import { RestablecerPassword } from './RestablecerPassword'
+import { esRutaRestablecer, quitarTokenDeLaUrl, tokenDesdeHash } from '../auth/enlaceRecuperacion'
 import { WelcomeOverlay } from './WelcomeOverlay'
 import { AdminPanel } from './AdminPanel'
 import { IconoCarga } from './IconoCarga'
 import { NoEncontrada } from './NoEncontrada'
 import App from '../App'
 
-type Vista = 'landing' | 'login' | 'registro' | 'no-encontrada'
+type Vista = 'landing' | 'login' | 'registro' | 'recuperar' | 'restablecer' | 'no-encontrada'
 
 /** Raíz donde se sirve la app (la `base` de Vite; «/» por defecto). */
 const RAIZ = import.meta.env.BASE_URL
 
 /**
  * Lee la vista desde la URL: la app vive en la raíz y navega con el hash
- * (#/login, #/registro, o la landing sin hash). Cualquier otra ruta o un
+ * (#/login, #/registro, #/recuperar, #/restablecer?token=… que llega en el
+ * correo de recuperación, o la landing sin hash). Cualquier otra ruta o un
  * #/… desconocido es un error 404.
  */
 function vistaDesdeHash(): Vista {
@@ -26,6 +30,8 @@ function vistaDesdeHash(): Vista {
   if (h === '') return 'landing'
   if (h === 'login') return 'login'
   if (h === 'registro') return 'registro'
+  if (h === 'recuperar') return 'recuperar'
+  if (esRutaRestablecer(window.location.hash)) return 'restablecer'
   return 'no-encontrada'
 }
 
@@ -43,11 +49,29 @@ export function AuthGate() {
   const { usuario, cargando, logout } = useAuth()
   const [vista, setVista] = useState<Vista>(() => vistaDesdeHash())
   const [mostrarBienvenida, setMostrarBienvenida] = useState(false)
+  // Token del enlace de recuperación. Se lee de la URL al cargar (sin efectos
+  // secundarios: StrictMode llama dos veces a este inicializador) y el efecto
+  // de abajo lo borra de la barra de direcciones y del historial.
+  const [tokenRecuperacion, setTokenRecuperacion] = useState<string | null>(
+    () => tokenDesdeHash(window.location.hash),
+  )
+  // Correo que la persona ya había escrito en el login, para no repetirlo.
+  const [emailRecuperacion, setEmailRecuperacion] = useState('')
+
+  useEffect(() => { quitarTokenDeLaUrl() }, [])
 
   // La flecha de atrás/adelante del navegador solo cambia el hash: aquí se
-  // traduce ese cambio a la vista correspondiente.
+  // traduce ese cambio a la vista correspondiente. También cubre pegar otro
+  // enlace de recuperación en la misma pestaña.
   useEffect(() => {
-    const sincronizar = () => setVista(vistaDesdeHash())
+    const sincronizar = () => {
+      const token = tokenDesdeHash(window.location.hash)
+      if (token) {
+        setTokenRecuperacion(token)
+        quitarTokenDeLaUrl()
+      }
+      setVista(vistaDesdeHash())
+    }
     window.addEventListener('popstate', sincronizar)
     window.addEventListener('hashchange', sincronizar)
     return () => {
@@ -58,9 +82,10 @@ export function AuthGate() {
 
   // Con sesión abierta el hash de autenticación ya no aplica: se limpia sin
   // agregar entrada al historial, para que atrás no reviva login/registro.
-  // Una dirección que no existe se queda en la página 404.
+  // Una dirección que no existe se queda en la página 404, y el enlace de
+  // recuperación se respeta aunque haya sesión (ver abajo).
   useEffect(() => {
-    if (usuario && window.location.hash && vista !== 'no-encontrada') {
+    if (usuario && window.location.hash && vista !== 'no-encontrada' && vista !== 'restablecer') {
       window.history.replaceState(null, '', window.location.pathname + window.location.search)
       setVista('landing')
     }
@@ -85,6 +110,21 @@ export function AuthGate() {
     )
   }
 
+  // El enlace del correo se atiende haya o no sesión abierta en este
+  // navegador. Al restablecer, el backend cierra TODAS las sesiones de la
+  // cuenta; aquí se olvida también la local para no quedar con un token muerto.
+  if (vista === 'restablecer') {
+    return (
+      <RestablecerPassword
+        key={tokenRecuperacion ?? 'sin-token'}
+        token={tokenRecuperacion}
+        onIrALogin={() => irA('login')}
+        onPedirOtro={() => irA('recuperar')}
+        onRestablecida={() => { if (usuario) logout() }}
+      />
+    )
+  }
+
   if (vista === 'no-encontrada') {
     return (
       <NoEncontrada
@@ -105,8 +145,15 @@ export function AuthGate() {
       )
     }
 
+    if (vista === 'recuperar') {
+      return <OlvidePassword emailInicial={emailRecuperacion} onIrALogin={() => irA('login')} />
+    }
+
     return vista === 'login'
-      ? <Login onIrARegistro={() => irA('registro')} />
+      ? <Login
+          onIrARegistro={() => irA('registro')}
+          onOlvidePassword={(email) => { setEmailRecuperacion(email); irA('recuperar') }}
+        />
       : <Register
           onIrALogin={() => irA('login')}
           onSuccess={() => setMostrarBienvenida(true)}

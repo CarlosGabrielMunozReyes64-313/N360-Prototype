@@ -14,7 +14,8 @@ export interface UsuarioAdmin extends Usuario {
   archivado_en: string | null;
 }
 
-export type MotivoCierre = "logout" | "admin" | "eliminacion";
+/** 'recuperacion': la persona restableció su contraseña con el enlace del correo (013). */
+export type MotivoCierre = "logout" | "admin" | "eliminacion" | "recuperacion";
 
 export interface SesionAdmin {
   sesion_id: string;
